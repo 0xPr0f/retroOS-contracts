@@ -165,7 +165,7 @@ contract HighScoresTest is Test {
         assertEq(highScores.serverPublicKey(), newServerKey);
     }
 
-    function testFailSubmitScoreInvalidSignature() public {
+    function test_RevertSubmitScoreInvalidSignature() public {
         uint256 score = 100;
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
@@ -184,10 +184,11 @@ contract HighScoresTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.prank(player1);
+        vm.expectRevert();
         highScores.submitScore(player1, score, gameType, signature);
     }
 
-    function testFailSubmitScoreWrongPlayer() public {
+    function test_RevertSubmitScoreWrongPlayer() public {
         uint256 score = 100;
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
@@ -206,10 +207,11 @@ contract HighScoresTest is Test {
 
         // Try to submit score as player2 with player1's signature
         vm.prank(player2);
+        vm.expectRevert();
         highScores.submitScore(player1, score, gameType, signature);
     }
 
-    function testFailSubmitScoreWithWrongAddress() public {
+    function test_RevertSubmitScoreWithWrongAddress() public {
         uint256 score = 100;
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
@@ -228,13 +230,15 @@ contract HighScoresTest is Test {
 
         // Try to submit score as player1 but with player2's address in the parameters
         vm.prank(player1);
+        vm.expectRevert();
         highScores.submitScore(player2, score, gameType, signature);
     }
 
-    function testFailUpdateServerKeyNonOwner() public {
+    function test_RevertUpdateServerKeyNonOwner() public {
         address newServerKey = makeAddr("newServer");
 
         vm.prank(player1);
+        vm.expectRevert();
         highScores.updateServerPublicKey(newServerKey);
     }
 

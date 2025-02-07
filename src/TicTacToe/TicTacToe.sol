@@ -155,9 +155,11 @@ contract TicTacToe {
         if (checkWinner(game.board)) {
             game.winner = msg.sender;
             game.isActive = false;
-            // Remove players from game when there's a winner
+            // Remove players from game and queue when there's a winner
             playerToGame[game.playerX] = bytes32(0);
             playerToGame[game.playerO] = bytes32(0);
+            isInQueue[game.playerX] = false;
+            isInQueue[game.playerO] = false;
             emit GameWon(gameId, msg.sender);
         } else if (isDraw(game.board)) {
             // Reset the board and continue playing
