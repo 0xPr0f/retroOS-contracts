@@ -320,16 +320,16 @@ contract TicTacToeTest is Test {
 
         bytes32 firstGameId = game.getCurrentGame(player2);
 
-        vm.expectEmit(false, false, false, false);
-        emit PlayersMatched(player1, player2, firstGameId);
+        assertEq((game.getCurrentGame(player1)), (firstGameId));
 
         vm.prank(player3);
         game.joinQueue();
+
         vm.prank(player4);
         game.joinQueue();
+
         bytes32 secGameId = game.getCurrentGame(player3);
 
-        vm.expectEmit(false, false, false, false);
-        emit PlayersMatched(player3, player4, secGameId);
+        assertEq((game.getCurrentGame(player4)), (secGameId));
     }
 }
