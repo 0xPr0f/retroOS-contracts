@@ -34,6 +34,7 @@ contract TicTacToe {
     event PlayerJoinedQueue(address player, uint256 position);
     event PlayersMatched(address player1, address player2, bytes32 gameId);
     event PlayerLeftQueue(address player);
+    event PlayerLeftGame(bytes32 gameId, address player, address winner);
 
     function joinQueue() external {
         require(!isInQueue[msg.sender], "Already in queue");
@@ -90,6 +91,34 @@ contract TicTacToe {
                 break;
             }
         }
+    }
+
+    function leaveGame() external {
+        bytes32 gameId = playerToGame[msg.sender];
+        require(gameId != bytes32(0), "Not in a game");
+
+        Game storage game = games[gameId];
+        require(game.isActive, "Game is not active");
+        require(
+            msg.sender == game.playerX || msg.sender == game.playerO,
+            "Not a player in this game"
+        );
+
+        // Set the other player as winner
+        address winner = msg.sender == game.playerX
+            ? game.playerO
+            : game.playerX;
+        game.winner = winner;
+        game.isActive = false;
+
+        // Reset player states
+        playerToGame[game.playerX] = bytes32(0);
+        playerToGame[game.playerO] = bytes32(0);
+        isInQueue[game.playerX] = false;
+        isInQueue[game.playerO] = false;
+
+        emit PlayerLeftGame(gameId, msg.sender, winner);
+        emit GameWon(gameId, winner);
     }
 
     function cleanupMatchedPlayers() internal {
