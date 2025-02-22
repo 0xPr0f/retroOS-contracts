@@ -37,14 +37,14 @@ contract HighScoresTest is Test {
         vm.deal(player2, 100 ether);
     }
 
-    function testInitialState() public view {
+    function test_InitialState() public view {
         assertEq(highScores.serverPublicKey(), serverKey);
         assertEq(highScores.owner(), owner);
         assertEq(highScores.getTotalPlayers(HighScores.GameType.SNAKE), 0);
         assertEq(highScores.getTotalPlayers(HighScores.GameType.TETRIS), 0);
     }
 
-    function testSubmitScore() public {
+    function test_SubmitScore() public {
         uint256 score = 100;
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
@@ -72,7 +72,7 @@ contract HighScoresTest is Test {
         assertEq(highScores.getTotalPlayers(gameType), 1);
     }
 
-    function testSubmitMultipleScores() public {
+    function test_SubmitMultipleScores() public {
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
         uint256[] memory scores = new uint256[](3);
         scores[0] = 100;
@@ -115,7 +115,7 @@ contract HighScoresTest is Test {
         assertEq(allScores[2].score, 150);
     }
 
-    function testLeaderboard() public {
+    function test_Leaderboard() public {
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
         // Submit scores for player1 and player2
@@ -134,7 +134,7 @@ contract HighScoresTest is Test {
         assertEq(leaderboard[1].highScore, 100);
     }
 
-    function testLatestScores() public {
+    function test_LatestScores() public {
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
         // Submit multiple scores for player1
@@ -155,7 +155,7 @@ contract HighScoresTest is Test {
         assertEq(latestScores[1].score, 150);
     }
 
-    function testUpdateServerPublicKey() public {
+    function test_UpdateServerPublicKey() public {
         address newServerKey = makeAddr("newServer");
 
         vm.expectEmit(true, true, true, true);
@@ -165,7 +165,7 @@ contract HighScoresTest is Test {
         assertEq(highScores.serverPublicKey(), newServerKey);
     }
 
-    function test_RevertSubmitScoreInvalidSignature() public {
+    function test_Revert_SubmitScoreInvalidSignature() public {
         uint256 score = 100;
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
@@ -188,7 +188,7 @@ contract HighScoresTest is Test {
         highScores.submitScore(player1, score, gameType, signature);
     }
 
-    function test_RevertSubmitScoreWrongPlayer() public {
+    function test_Revert_SubmitScoreWrongPlayer() public {
         uint256 score = 100;
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
@@ -211,7 +211,7 @@ contract HighScoresTest is Test {
         highScores.submitScore(player1, score, gameType, signature);
     }
 
-    function test_RevertSubmitScoreWithWrongAddress() public {
+    function test_Revert_SubmitScoreWithWrongAddress() public {
         uint256 score = 100;
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
@@ -234,7 +234,7 @@ contract HighScoresTest is Test {
         highScores.submitScore(player2, score, gameType, signature);
     }
 
-    function test_RevertUpdateServerKeyNonOwner() public {
+    function test_Revert_UpdateServerKeyNonOwner() public {
         address newServerKey = makeAddr("newServer");
 
         vm.prank(player1);

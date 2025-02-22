@@ -1,66 +1,71 @@
-## Foundry
+# RetroOS Smart Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+*Contracts to port classic games on-chain. For the arcade.*
 
-Foundry consists of:
+Core contracts used by Retro OS Arcade, bringing classic gaming experiences on-chain through robust smart contract implementations.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Featured Contracts
 
-## Documentation
+### Realm Clash
 
-https://book.getfoundry.sh/
+Enhanced version of [RealmClash](https://github.com/0xPr0f/realmclash) by [0xPr0f](https://github.com/0xPr0f). A turn-based TCG battle game with character progression, equipment systems, and strategic combat.
 
-## Usage
+**Core Components:**
 
-### Build
+- Character NFTs with stats, equipment, class system, and progression
+- Battle system featuring matchmaking, challenges, and complex mechanics
+- Equipment slots for weapons and armor affecting battle performance
+- Seven unique character classes with distinct playstyles
+- Experience-based leveling with veteran status rewards
+- Critical hits and dodge mechanics influenced by stats
+- Comprehensive battle logging and statistics
 
-```shell
-$ forge build
+### HighScores
+
+On-chain leaderboard system tracking achievements across Retro OS Arcade games.
+
+**Features:**
+
+- Secure score submission and verification
+- Per-game historical rankings
+- Global and game-specific leaderboards
+- Top performer tracking
+- Score aggregation and ranking systems
+
+### TicTacToe  
+
+Classic [Tic-tac-toe](https://en.wikipedia.org/wiki/Tic-tac-toe) reimagined with smart contract-based matchmaking and verification.
+
+**Features:**
+
+- Automated matchmaking system
+- Move validation and state verification
+- Real-time win condition checking
+- Fair forfeit handling
+- Permanent game history recording
+
+## Development
+
+```bash
+# Install Dependencies
+forge install  
+# Run test suite
+forge test     
 ```
 
-### Test
+## Credits
 
-```shell
-$ forge test
-```
+- Original [RealmClash](github.com/0xPr0f/realmclash) concept by [0xPr0f](github.com/0xPr0f)
+- Integrated with [Retro OS Arcade](retro.2δ.com)
 
-### Format
+## Contributions
 
-```shell
-$ forge fmt
-```
+We welcome contributions from the community to enhance and expand the collection of contracts. If you have any ideas, bug fixes, or new game contracts to propose, please feel free to submit a pull request.
 
-### Gas Snapshots
+## License
 
-```shell
-$ forge snapshot
-```
+All contracts in this repository are released under the MIT License. Please refer to the LICENSE file for more details.
 
-### Anvil
+---
 
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+Embark on a nostalgic gaming journey with these contracts and experience the joy of classic games on the blockchain!

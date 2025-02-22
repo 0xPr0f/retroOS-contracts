@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {TicTacToe} from "../../src/TicTacToe/TicTacToe.sol";
@@ -36,7 +36,7 @@ contract TicTacToeTest is Test {
     O = 2 (Player 2's moves)
     Empty = 0
     */
-    function testFullGame() public {
+    function test_FullGame() public {
         // Player 1 joins queue
         vm.prank(player1);
         game.joinQueue();
@@ -103,7 +103,7 @@ contract TicTacToeTest is Test {
         assertEq(board[4], 2); // O - center
     }
 
-    function test_RevertInvalidMove() public {
+    function test_Revert_InvalidMove() public {
         // Player 1 joins queue
         vm.prank(player1);
         game.joinQueue();
@@ -121,7 +121,7 @@ contract TicTacToeTest is Test {
         game.makeMove(gameId, 0);
     }
 
-    function test_RevertMoveOnFinishedGame() public {
+    function test_Revert_MoveOnFinishedGame() public {
         // Player 1 joins queue
         vm.prank(player1);
         game.joinQueue();
@@ -150,7 +150,7 @@ contract TicTacToeTest is Test {
         game.makeMove(gameId, 5);
     }
 
-    function testDrawAndReset() public {
+    function test_DrawAndReset() public {
         // Player 1 joins queue
         vm.prank(player1);
         game.joinQueue();
@@ -207,7 +207,7 @@ contract TicTacToeTest is Test {
         game.makeMove(gameId, 8);
     }
 
-    function test_RevertMoveToOccupiedPosition() public {
+    function test_Revert_MoveToOccupiedPosition() public {
         // Player 1 joins queue
         vm.prank(player1);
         game.joinQueue();
@@ -228,7 +228,7 @@ contract TicTacToeTest is Test {
         game.makeMove(gameId, 0); // Should fail
     }
 
-    function test_RevertLeaveQueueWhileInGame() public {
+    function test_Revert_LeaveQueueWhileInGame() public {
         // Player 1 joins queue
         vm.prank(player1);
         game.joinQueue();
@@ -242,7 +242,7 @@ contract TicTacToeTest is Test {
         vm.expectRevert();
         game.leaveQueue();
     }
-    function testCanRestartGameAfterEnd() public {
+    function test_CanRestartGameAfterEnd() public {
         playFullGame();
         // Skip a time to avoid duplicate timestamp
         vm.warp(block.timestamp + 1);
@@ -311,7 +311,7 @@ contract TicTacToeTest is Test {
 
         assertEq(winner, player1);
     }
-    function testFourPlayersJoinTwoGames() public {
+    function test_FourPlayersJoinTwoGames() public {
         vm.prank(player1);
         game.joinQueue();
 

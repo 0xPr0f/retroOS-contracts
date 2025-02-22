@@ -3,23 +3,22 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBase.sol";
 
 /**
- * @title WarriorCombat
+ * @title RealmClash-RNGCombat
  * @dev A PvP turn-based combat game where players battle warriors against each other with a random outcome based on warriors stats points
  */
-contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIds;
+contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
+    uint256 public _tokenIdsCounter;
+    uint256 public _battleIdsCounter;
 
     bytes32 internal keyHash;
     uint256 internal fee;
 
     uint256 public constant VETERAN_THRESHOLD = 10;
-    uint256 public constant MINT_PRICE = 0.05 ether;
-    uint256 public constant BATTLE_FEE = 0.01 ether;
+    uint256 public constant MINT_PRICE = 0 ether; //Testing
+    uint256 public constant BATTLE_FEE = 0 ether; //Testing
 
     uint8 public constant MIN_STAT = 1;
     uint8 public constant MAX_STAT = 100;
@@ -51,8 +50,7 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
     mapping(uint256 => Warrior) public warriors;
     mapping(uint256 => uint256) public battleCooldowns;
     mapping(uint256 => Battle) public battles;
-    Counters.Counter private _battleIds;
-    mapping(bytes32 => uint256) private requestToBattle;
+    mapping(bytes32 => uint256) public requestToBattle;
 
     event WarriorCreated(
         uint256 indexed id,
@@ -62,7 +60,8 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
     event BattleInitiated(
         uint256 indexed battleId,
         uint256 indexed challengerId,
-        uint256 indexed defenderId
+        uint256 indexed defenderId,
+        bytes32 initiateBattled
     );
     event BattleCompleted(
         uint256 indexed battleId,
@@ -94,7 +93,7 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         uint8 agility,
         uint8 vitality,
         uint8 intelligence
-    ) external payable {
+    ) external payable returns (uint256) {
         require(msg.value >= MINT_PRICE, "Insufficient payment");
         require(
             strength >= MIN_STAT &&
@@ -117,8 +116,7 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
                 STAT_POINTS,
             "Must use exactly 200 stat points"
         );
-        _tokenIds.increment();
-        uint256 newWarriorId = _tokenIds.current();
+        uint256 newWarriorId = ++_tokenIdsCounter;
         _safeMint(msg.sender, newWarriorId);
         warriors[newWarriorId] = Warrior({
             id: newWarriorId,
@@ -134,6 +132,7 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
             lastBattleTime: 0
         });
         emit WarriorCreated(newWarriorId, msg.sender, name);
+        return newWarriorId;
     }
 
     function initiateBattle(
@@ -146,20 +145,24 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
             ownerOf(challengerId) != ownerOf(defenderId),
             "Cannot battle your own warrior"
         );
-        require(
-            block.timestamp >=
-                warriors[challengerId].lastBattleTime + BATTLE_COOLDOWN,
-            "Challenger on cooldown"
-        );
-        require(
-            block.timestamp >=
-                warriors[defenderId].lastBattleTime + BATTLE_COOLDOWN,
-            "Defender on cooldown"
-        );
+        if (warriors[challengerId].lastBattleTime != 0) {
+            require(
+                block.timestamp >=
+                    warriors[challengerId].lastBattleTime + BATTLE_COOLDOWN,
+                "Challenger on cooldown"
+            );
+        }
+        if (warriors[defenderId].lastBattleTime != 0) {
+            require(
+                block.timestamp >=
+                    warriors[defenderId].lastBattleTime + BATTLE_COOLDOWN,
+                "Defender on cooldown"
+            );
+        }
+
         warriors[challengerId].lastBattleTime = block.timestamp;
         warriors[defenderId].lastBattleTime = block.timestamp;
-        _battleIds.increment();
-        uint256 battleId = _battleIds.current();
+        uint256 battleId = ++_battleIdsCounter;
         battles[battleId] = Battle({
             id: battleId,
             challenger: challengerId,
@@ -174,7 +177,7 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         );
         bytes32 requestId = requestRandomness(keyHash, fee);
         requestToBattle[requestId] = battleId;
-        emit BattleInitiated(battleId, challengerId, defenderId);
+        emit BattleInitiated(battleId, challengerId, defenderId, requestId);
     }
 
     function fulfillRandomness(
@@ -182,6 +185,7 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         uint256 randomness
     ) internal override {
         uint256 battleId = requestToBattle[requestId];
+        emit BattleInitiated(0, 0, battleId, requestId);
         require(battleId > 0, "Battle not found");
         Battle storage battle = battles[battleId];
         require(!battle.completed, "Battle already completed");
@@ -297,12 +301,12 @@ contract WarriorCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
     function getWarrior(
         uint256 warriorId
     ) external view returns (Warrior memory) {
-        require(_exists(warriorId), "Warrior does not exist");
+        require(warriors[warriorId].id != 0, "Warrior does not exist");
         return warriors[warriorId];
     }
 
     function getBattle(uint256 battleId) external view returns (Battle memory) {
-        require(battleId <= _battleIds.current(), "Battle does not exist");
+        require(battleId <= _battleIdsCounter, "Battle does not exist");
         return battles[battleId];
     }
 
