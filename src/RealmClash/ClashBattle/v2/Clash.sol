@@ -2,9 +2,10 @@
 pragma solidity ^0.8.13;
 
 /**
- * @title Realm Clash Battle System
+ * @title Realm Clash Battle System v2
  * @dev Contract for managing turn-based PvP battles between character card NFTs, calculating combat outcomes based on stats, equipment and abilities
  * Handles battle mechanics including damage calculation, dodge chances, critical hits, and experience rewards
+ * @dev V2 is already in production as some complex things that could not be implemented in V1 are been implemented
  */
 
 interface ICharacterCard {
@@ -128,10 +129,15 @@ contract RealmClashBattleSystem {
 
     mapping(address => mapping(address => uint256)) public pendingChallenges;
 
-    //// Track challengers for each player - can modify this to make it better
-    // and track time, stake e.t.c
-    mapping(address => address[]) public playerChallengers;
-    mapping(address => address[]) public playerChallenges;
+    struct Challenge {
+        address challenger;
+        address challenged;
+        uint256 characterId;
+        uint256 timeIssued;
+        bool isActive;
+    }
+    mapping(address => Challenge[]) public playerChallengers;
+    mapping(address => Challenge[]) public playerChallenges;
 
     //Rounding isnt really an issue since we are in test
     uint8 public constant MAX_ATTACK_POINTS = 13;
@@ -307,24 +313,38 @@ contract RealmClashBattleSystem {
             "Opponent is already in a battle"
         );
 
-        pendingChallenges[msg.sender][_opponent] = _characterId;
+        Challenge memory newChallenge = Challenge({
+            challenger: msg.sender,
+            challenged: _opponent,
+            characterId: _characterId,
+            timeIssued: block.timestamp,
+            isActive: true
+        });
 
-        // Add to tracking arrays
-        playerChallengers[_opponent].push(msg.sender);
-        playerChallenges[msg.sender].push(_opponent);
+        playerChallengers[_opponent].push(newChallenge);
+        playerChallenges[msg.sender].push(newChallenge);
 
         emit ChallengeIssued(msg.sender, _opponent, _characterId);
     }
 
-    // Modify acceptChallenge to clean up the arrays
     function acceptChallenge(
         address _challenger,
         uint256 _characterId
     ) external characterOwner(_characterId) {
-        require(
-            pendingChallenges[_challenger][msg.sender] > 0,
-            "No challenge from this player"
-        );
+        bool challengeFound = false;
+        uint256 challengerCharacterId;
+
+        for (uint i = 0; i < playerChallengers[msg.sender].length; i++) {
+            Challenge memory challenge = playerChallengers[msg.sender][i];
+            if (challenge.challenger == _challenger && challenge.isActive) {
+                challengeFound = true;
+                challengerCharacterId = challenge.characterId;
+                playerChallengers[msg.sender][i].isActive = false;
+                break;
+            }
+        }
+
+        require(challengeFound, "No active challenge from this player");
         require(
             activeBattlesByPlayer[msg.sender] == 0,
             "You are already in a battle"
@@ -334,10 +354,6 @@ contract RealmClashBattleSystem {
             "Challenger is already in a battle"
         );
 
-        uint256 challengerCharacterId = pendingChallenges[_challenger][
-            msg.sender
-        ];
-
         uint256 battleId = _createBattle(
             _challenger,
             msg.sender,
@@ -345,52 +361,51 @@ contract RealmClashBattleSystem {
             _characterId
         );
 
-        // Clean up challenge data
-        delete pendingChallenges[_challenger][msg.sender];
-        _removeFromArray(playerChallengers[msg.sender], _challenger);
-        _removeFromArray(playerChallenges[_challenger], msg.sender);
+        // Deactivate challenge in challenger's list
+        for (uint i = 0; i < playerChallenges[_challenger].length; i++) {
+            if (playerChallenges[_challenger][i].challenged == msg.sender) {
+                playerChallenges[_challenger][i].isActive = false;
+                break;
+            }
+        }
 
         emit ChallengeAccepted(_challenger, msg.sender, battleId);
     }
 
-    function _removeFromArray(address[] storage array, address value) internal {
-        for (uint i = 0; i < array.length; i++) {
-            if (array[i] == value) {
-                array[i] = array[array.length - 1];
-                array.pop();
-                break;
-            }
-        }
-    }
-
     function getPlayerChallengers(
         address _player
-    ) external view returns (address[] memory) {
+    ) external view returns (Challenge[] memory) {
         return playerChallengers[_player];
     }
 
     function getPlayerChallenges(
         address _player
-    ) external view returns (address[] memory) {
+    ) external view returns (Challenge[] memory) {
         return playerChallenges[_player];
     }
 
-    function getChallengeDetails(
-        address _challenger,
-        address _opponent
-    ) external view returns (uint256 characterId) {
-        return pendingChallenges[_challenger][_opponent];
-    }
-
     function rejectChallenge(address _challenger) external {
-        require(
-            pendingChallenges[_challenger][msg.sender] > 0,
-            "No challenge from this player"
-        );
+        bool challengeFound = false;
 
-        delete pendingChallenges[_challenger][msg.sender];
-        _removeFromArray(playerChallengers[msg.sender], _challenger);
-        _removeFromArray(playerChallenges[_challenger], msg.sender);
+        for (uint i = 0; i < playerChallengers[msg.sender].length; i++) {
+            Challenge memory challenge = playerChallengers[msg.sender][i];
+            if (challenge.challenger == _challenger && challenge.isActive) {
+                playerChallengers[msg.sender][i].isActive = false;
+                challengeFound = true;
+                break;
+            }
+        }
+
+        require(challengeFound, "No active challenge from this player");
+
+        // Deactivate challenge in challenger's list
+        for (uint i = 0; i < playerChallenges[_challenger].length; i++) {
+            if (playerChallenges[_challenger][i].challenged == msg.sender) {
+                playerChallenges[_challenger][i].isActive = false;
+                break;
+            }
+        }
+
         emit ChallengeRejected(_challenger, msg.sender);
     }
 
@@ -627,17 +642,13 @@ contract RealmClashBattleSystem {
             return;
         }
 
-        // Switch turns after attack only if other player hasn't ended their turn
+        // Switch turns after attack
         if (isPlayer1) {
-            if (!battle.player1TurnEnded && !battle.player2TurnEnded) {
-                battle.turnState = TurnState.Player2Turn;
-                battle.currentTurnPlayer = battle.player2;
-            }
+            battle.turnState = TurnState.Player2Turn;
+            battle.currentTurnPlayer = battle.player2;
         } else {
-            if (!battle.player2TurnEnded && !battle.player1TurnEnded) {
-                battle.turnState = TurnState.Player1Turn;
-                battle.currentTurnPlayer = battle.player1;
-            }
+            battle.turnState = TurnState.Player1Turn;
+            battle.currentTurnPlayer = battle.player1;
         }
 
         emit TurnStarted(
@@ -666,25 +677,27 @@ contract RealmClashBattleSystem {
         } else {
             require(battle.turnState == TurnState.Player2Turn, "Not your turn");
             battle.player2TurnEnded = true;
+
+            // If player2 ends turn, start new round since player1 already ended
+            if (battle.player1TurnEnded) {
+                _startNewTurn(_battleId);
+                return;
+            }
+
             battle.turnState = TurnState.Player1Turn;
             battle.currentTurnPlayer = battle.player1;
         }
 
-        // Start new turn if both players have ended their turns
-        if (battle.player1TurnEnded && battle.player2TurnEnded) {
-            _startNewTurn(_battleId);
-        } else {
-            emit TurnStarted(
-                battle.battleId,
-                battle.currentTurnPlayer,
-                battle.currentTurnPlayer == battle.player1
-                    ? battle.player1AttackPoints
-                    : battle.player2AttackPoints
-            );
-        }
-
         _recordBattleAction(battle, msg.sender, "endTurn", 0, false, false);
         emit TurnEnded(_battleId, msg.sender);
+
+        emit TurnStarted(
+            battle.battleId,
+            battle.currentTurnPlayer,
+            battle.currentTurnPlayer == battle.player1
+                ? battle.player1AttackPoints
+                : battle.player2AttackPoints
+        );
 
         battle.lastActionTime = block.timestamp;
     }
@@ -776,7 +789,7 @@ contract RealmClashBattleSystem {
         characterContract.updateBattleResult(
             losingCharacterId,
             false,
-            wasForfeit ? FORFEIT_XP : VICTORY_XP / 2
+            wasForfeit ? FORFEIT_XP : VICTORY_XP
         );
 
         delete activeBattlesByPlayer[battle.player1];

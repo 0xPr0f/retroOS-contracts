@@ -48,7 +48,7 @@ interface ArmorInterface {
 }
 
 contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
-    uint256 private _tokenIdCounter;
+    uint256 public _tokenIdCounter;
     mapping(address => bool) public _allowedMinters;
     address public weaponContractAddress;
     address public armorContractAddress;
@@ -98,9 +98,9 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
 
     uint8 public constant STAT_UPGRADE_COST = 1;
 
-    uint256 public constant XP_PER_LEVEL = 1000;
+    uint256 public constant XP_PER_LEVEL = 100;
 
-    uint8 public constant POINTS_PER_LEVEL = 5;
+    uint8 public constant POINTS_PER_LEVEL = 10;
 
     uint8 public constant MAX_STAT_VALUE = 255;
     // points constants (1 point = 1%)
@@ -118,6 +118,34 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
     uint16 constant BASE_CRIT_RATE = 5; // 5%
     uint16 constant MIN_CRIT_MULTIPLIER = 150; // 150%
     uint16 constant MAX_CRIT_MULTIPLIER = 350; // 350%
+
+    //Base events i dont believe they are that much needed tho
+    event CharacterCreated(
+        address creator,
+        uint256 indexed tokenId,
+        string name,
+        uint8 strength,
+        uint8 defense,
+        uint8 agility,
+        uint8 vitality,
+        uint8 intelligence,
+        uint8 magicPower,
+        CharacterClass characterClass
+    );
+
+    event WeaponEquipped(uint256 indexed characterId, uint256 indexed weaponId);
+    event WeaponUnequipped(uint256 indexed characterId, uint256 weaponId);
+    event ArmorEquipped(uint256 indexed characterId, uint256 indexed armorId);
+    event ArmorUnequipped(uint256 indexed characterId, uint256 armorId);
+    event StatsIncreased(
+        uint256 indexed characterId,
+        uint8 strengthIncrease,
+        uint8 defenseIncrease,
+        uint8 agilityIncrease,
+        uint8 vitalityIncrease,
+        uint8 intelligenceIncrease,
+        uint8 magicPowerIncrease
+    );
 
     constructor() ERC721("RealmClashCharacters", "RCCC") {
         _allowedMinters[msg.sender] = true;
@@ -192,7 +220,10 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
     }
 
     modifier onlyMinter() {
-        require(_allowedMinters[msg.sender], "Not authorized to mint");
+        require(
+            _allowedMinters[msg.sender] || msg.sender == address(this),
+            "Not authorized to mint or Not contract"
+        );
         _;
     }
 
@@ -267,6 +298,20 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
             statPoints: 10, // Start with 10 stat points
             experience: 0
         });
+
+        emit CharacterCreated(
+            msg.sender,
+            _tokenId,
+            _name,
+            _strength,
+            _defense,
+            _agility,
+            _vitality,
+            _intelligence,
+            _magicPower,
+            CharacterClass(_classId)
+        );
+
         return _tokenId;
     }
 
@@ -282,12 +327,15 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         );
 
         characters[_characterId].weaponId = _weaponId;
+        emit WeaponEquipped(_characterId, _weaponId);
     }
 
     function unequipWeapon(
         uint256 _characterId
     ) external onlyOwnerOf(_characterId) {
+        uint256 weaponId = characters[_characterId].weaponId;
         characters[_characterId].weaponId = 0;
+        emit WeaponUnequipped(_characterId, weaponId);
     }
 
     function equipArmor(
@@ -302,12 +350,15 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         );
 
         characters[_characterId].armorId = _armorId;
+        emit ArmorEquipped(_characterId, _armorId);
     }
 
     function unequipArmor(
         uint256 _characterId
     ) external onlyOwnerOf(_characterId) {
+        uint256 armorId = characters[_characterId].armorId;
         characters[_characterId].armorId = 0;
+        emit ArmorUnequipped(_characterId, armorId);
     }
 
     // Apply diminishing returns formula to a stat value
@@ -720,28 +771,14 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
 
         // Ensure stats don't exceed maximum
         require(
-            character.strength + _strengthIncrease <= MAX_STAT_VALUE,
-            "Strength would exceed maximum"
-        );
-        require(
-            character.defense + _defenseIncrease <= MAX_STAT_VALUE,
-            "Defense would exceed maximum"
-        );
-        require(
-            character.agility + _agilityIncrease <= MAX_STAT_VALUE,
-            "Agility would exceed maximum"
-        );
-        require(
-            character.vitality + _vitalityIncrease <= MAX_STAT_VALUE,
-            "Vitality would exceed maximum"
-        );
-        require(
-            character.intelligence + _intelligenceIncrease <= MAX_STAT_VALUE,
-            "Intelligence would exceed maximum"
-        );
-        require(
-            character.magicPower + _magicPowerIncrease <= MAX_STAT_VALUE,
-            "Magic Power would exceed maximum"
+            character.strength + _strengthIncrease <= MAX_STAT_VALUE &&
+                character.defense + _defenseIncrease <= MAX_STAT_VALUE &&
+                character.agility + _agilityIncrease <= MAX_STAT_VALUE &&
+                character.vitality + _vitalityIncrease <= MAX_STAT_VALUE &&
+                character.intelligence + _intelligenceIncrease <=
+                MAX_STAT_VALUE &&
+                character.magicPower + _magicPowerIncrease <= MAX_STAT_VALUE,
+            "Stats would exceed maximum"
         );
 
         // Apply the increases
@@ -754,6 +791,16 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
 
         // Deduct the points
         character.statPoints -= totalPointsNeeded;
+
+        emit StatsIncreased(
+            _characterId,
+            _strengthIncrease,
+            _defenseIncrease,
+            _agilityIncrease,
+            _vitalityIncrease,
+            _intelligenceIncrease,
+            _magicPowerIncrease
+        );
     }
 
     // Change character class
@@ -849,7 +896,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         return tokenIds;
     }
 
-    function burn(uint256 _tokenId) external onlyMinter {
+    function burn(uint256 _tokenId) external onlyOwnerOf(_tokenId) {
         _burn(_tokenId);
         delete characters[_tokenId];
     }

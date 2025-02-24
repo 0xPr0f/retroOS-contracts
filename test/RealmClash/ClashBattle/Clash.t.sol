@@ -180,7 +180,7 @@ contract RealmClashBattleSystemTest is Test {
         battleSystem.forfeitBattle(battleId);
         vm.stopPrank();
 
-        (, , , , , , address winner, , , ) = battleSystem.getBattleDetails(
+        (, , , , , , address winner, , , , , ) = battleSystem.getBattleDetails(
             battleId
         );
         assertEq(winner, player1);
@@ -202,6 +202,8 @@ contract RealmClashBattleSystemTest is Test {
             ,
             ,
             ,
+            ,
+            ,
 
         ) = battleSystem.getBattleDetails(battleId);
         assertEq(
@@ -216,7 +218,7 @@ contract RealmClashBattleSystemTest is Test {
         vm.warp(block.timestamp + battleSystem.TURN_TIMEOUT() + 1);
         battleSystem.checkTurnTimeout(battleId);
 
-        (, , , , , , address winner, , , ) = battleSystem.getBattleDetails(
+        (, , , , , , address winner, , , , , ) = battleSystem.getBattleDetails(
             battleId
         );
         assertEq(winner, player2);
@@ -233,6 +235,8 @@ contract RealmClashBattleSystemTest is Test {
             ,
             ,
             RealmClashBattleSystem.BattleState state,
+            ,
+            ,
             ,
             ,
             ,
@@ -323,20 +327,36 @@ contract RealmClashBattleSystemTest is Test {
             player2MagicPower
         );
 
-        for (uint256 round = 1; round <= 4; round++) {
-            console.log("Round %s", round);
+        for (uint256 round = 1; round <= 5; round++) {
+            (
+                uint256 player1CurrentHealth,
+                uint256 player1MaxHealth,
+                uint256 player2CurrentHealth,
+                uint256 player2MaxHealth,
+                uint256 turnsCompleted,
+                uint256 totalDamageDealt
+            ) = battleSystem.getBattleProgress(battleId);
+            if (player1CurrentHealth > 0 && player2CurrentHealth > 0) {
+                console.log("Round %s", round);
 
-            (address player1Address, uint8 player1AttackPoints, ) = battleSystem
-                .getCurrentTurnInfo(battleId);
-            console.log("  Player 1's turn");
-            console.log("    Attack Points: %s", player1AttackPoints);
-            _performAttack(player1Address, battleId, 2);
+                (
+                    address player1Address,
+                    uint8 player1AttackPoints,
 
-            (address player2Address, uint8 player2AttackPoints, ) = battleSystem
-                .getCurrentTurnInfo(battleId);
-            console.log("  Player 2's turn");
-            console.log("    Attack Points: %s", player2AttackPoints);
-            _performAttack(player2Address, battleId, 1);
+                ) = battleSystem.getCurrentTurnInfo(battleId);
+                console.log("  Player 1's turn");
+                console.log("    Attack Points: %s", player1AttackPoints);
+                _performAttack(player1Address, battleId, 2);
+
+                (
+                    address player2Address,
+                    uint8 player2AttackPoints,
+
+                ) = battleSystem.getCurrentTurnInfo(battleId);
+                console.log("  Player 2's turn");
+                console.log("    Attack Points: %s", player2AttackPoints);
+                _performAttack(player2Address, battleId, 1);
+            }
         }
 
         (
@@ -348,7 +368,7 @@ contract RealmClashBattleSystemTest is Test {
             uint256 totalDamageDealt
         ) = battleSystem.getBattleProgress(battleId);
 
-        (, , , , , , address winner, , , ) = battleSystem.getBattleDetails(
+        (, , , , , , address winner, , , , , ) = battleSystem.getBattleDetails(
             battleId
         );
 
