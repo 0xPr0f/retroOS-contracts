@@ -42,34 +42,27 @@ contract HighScores {
         require(msg.sender == owner, "Only owner can call this function");
         _;
     }
-
     function submitScore(
         address player,
         uint256 score,
         GameType gameType,
         bytes memory signature
     ) public {
-        // Verify that the player address matches msg.sender
         require(player == msg.sender, "Player address must match sender");
 
-        // Create message hash from player address, score, and game type
         bytes32 messageHash = keccak256(
             abi.encodePacked(player, score, gameType)
         );
 
-        // Recover the signer from the signature
         address signer = recoverSigner(messageHash, signature);
 
-        // Verify the signature is from our trusted server
         require(signer == serverPublicKey, "Invalid signature");
 
-        // Register player if not already registered for this game type
         if (!isPlayerRegistered[gameType][player]) {
             gamePlayers[gameType].push(player);
             isPlayerRegistered[gameType][player] = true;
         }
 
-        // Create and store the new score
         Score memory newScore = Score({
             player: player,
             score: score,
@@ -80,6 +73,42 @@ contract HighScores {
         playerScores[player][gameType].push(newScore);
 
         emit ScoreSubmitted(player, gameType, score);
+    }
+
+    function batchSubmitScores(
+        address player,
+        uint256[] memory scores,
+        GameType[] memory gameTypes,
+        bytes[] memory signatures
+    ) public {
+        require(
+            scores.length == gameTypes.length &&
+                scores.length == signatures.length,
+            "Input arrays must have the same length"
+        );
+        require(player == msg.sender, "Player address must match sender");
+
+        for (uint256 i = 0; i < scores.length; i++) {
+            bytes32 messageHash = keccak256(
+                abi.encodePacked(player, scores[i], gameTypes[i])
+            );
+            address signer = recoverSigner(messageHash, signatures[i]);
+            require(signer == serverPublicKey, "Invalid signature");
+
+            if (!isPlayerRegistered[gameTypes[i]][player]) {
+                gamePlayers[gameTypes[i]].push(player);
+                isPlayerRegistered[gameTypes[i]][player] = true;
+            }
+            Score memory newScore = Score({
+                player: player,
+                score: scores[i],
+                timestamp: block.timestamp,
+                signature: signatures[i]
+            });
+
+            playerScores[player][gameTypes[i]].push(newScore);
+            emit ScoreSubmitted(player, gameTypes[i], scores[i]);
+        }
     }
 
     function getHighestScore(
