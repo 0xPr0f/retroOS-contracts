@@ -260,6 +260,13 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         return newTokenId;
     }
 
+    function setTokenUriBackdoor(
+        uint256 _tokenId,
+        string memory _uri
+    ) external onlyMinter {
+        _setTokenURI(_tokenId, _uri);
+    }
+
     function createCharacter(
         string memory _name,
         string memory _uri,

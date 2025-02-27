@@ -333,29 +333,29 @@ contract RealmClashBattleSystemTest is Test {
                 uint256 player1MaxHealth,
                 uint256 player2CurrentHealth,
                 uint256 player2MaxHealth,
-                uint256 turnsCompleted,
-                uint256 totalDamageDealt
+                uint256 turns1Completed,
+                uint256 total1DamageDealt
             ) = battleSystem.getBattleProgress(battleId);
             if (player1CurrentHealth > 0 && player2CurrentHealth > 0) {
                 console.log("Round %s", round);
 
                 (
-                    address player1Address,
+                    address player1Addr,
                     uint8 player1AttackPoints,
 
                 ) = battleSystem.getCurrentTurnInfo(battleId);
                 console.log("  Player 1's turn");
                 console.log("    Attack Points: %s", player1AttackPoints);
-                _performAttack(player1Address, battleId, 2);
+                _performAttack(player1Addr, battleId, 2);
 
                 (
-                    address player2Address,
+                    address player2Addr,
                     uint8 player2AttackPoints,
 
                 ) = battleSystem.getCurrentTurnInfo(battleId);
                 console.log("  Player 2's turn");
                 console.log("    Attack Points: %s", player2AttackPoints);
-                _performAttack(player2Address, battleId, 1);
+                _performAttack(player2Addr, battleId, 1);
             }
         }
 
@@ -364,8 +364,8 @@ contract RealmClashBattleSystemTest is Test {
             uint256 player1MaxHealth,
             uint256 player2CurrentHealth,
             uint256 player2MaxHealth,
-            uint256 turnsCompleted,
-            uint256 totalDamageDealt
+            uint256 turns2Completed,
+            uint256 total2DamageDealt
         ) = battleSystem.getBattleProgress(battleId);
 
         (, , , , , , address winner, , , , , ) = battleSystem.getBattleDetails(
@@ -383,8 +383,8 @@ contract RealmClashBattleSystemTest is Test {
         console.log("             MaxHealth: %s", player1MaxHealth);
         console.log("  Player 2 - CurrentHealth: %s", player2CurrentHealth);
         console.log("             MaxHealth: %s", player2MaxHealth);
-        console.log("  Turns Completed: %s", turnsCompleted);
-        console.log("  Total Damage Dealt: %s", totalDamageDealt);
+        console.log("  Turns Completed: %s", turns2Completed);
+        console.log("  Total Damage Dealt: %s", total2DamageDealt);
     }
     function _performAttack(
         address player,
