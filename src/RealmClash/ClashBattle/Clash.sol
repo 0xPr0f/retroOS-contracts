@@ -661,17 +661,24 @@ contract RealmClashBattleSystem {
         if (isPlayer1) {
             require(battle.turnState == TurnState.Player1Turn, "Not your turn");
             battle.player1TurnEnded = true;
-            battle.turnState = TurnState.Player2Turn;
-            battle.currentTurnPlayer = battle.player2;
+
+            if (!(battle.player1TurnEnded && battle.player2TurnEnded)) {
+                battle.turnState = TurnState.Player2Turn;
+                battle.currentTurnPlayer = battle.player2;
+            }
         } else {
             require(battle.turnState == TurnState.Player2Turn, "Not your turn");
             battle.player2TurnEnded = true;
-            battle.turnState = TurnState.Player1Turn;
-            battle.currentTurnPlayer = battle.player1;
+            if (!(battle.player1TurnEnded && battle.player2TurnEnded)) {
+                battle.turnState = TurnState.Player1Turn;
+                battle.currentTurnPlayer = battle.player1;
+            }
         }
 
         // Start new turn if both players have ended their turns
         if (battle.player1TurnEnded && battle.player2TurnEnded) {
+            // No need to switch turns again before calling _startNewTurn
+            // _startNewTurn will handle the turn switching correctly
             _startNewTurn(_battleId);
         } else {
             emit TurnStarted(
@@ -850,12 +857,14 @@ contract RealmClashBattleSystem {
         uint256 _damageMultiplier
     ) public view returns (uint256 finalDamage, bool isCritical) {
         uint256 baseDamage;
-        if (_attackStat > _defenseStat) {
-            uint256 defenseReduction = (_defenseStat * 50) / 100;
-            baseDamage = _attackStat - defenseReduction;
-        } else {
-            baseDamage = (_attackStat * 50) / 100;
-        }
+
+        // Progressive defense reduction - higher defense reduces damage more effectively
+        uint256 defenseRatio = (_defenseStat * 100) / (_attackStat + 1); // Prevent division by zero
+        uint256 damageReduction = (defenseRatio * 80) / 100; // Up to 80% reduction based on defense ratio
+
+        if (damageReduction > 80) damageReduction = 80; // Cap at 80% reduction
+
+        baseDamage = (_attackStat * (100 - damageReduction)) / 100;
 
         uint256 critChance = 5 + (_intelligence * 10) / 100;
         if (critChance > 30) critChance = 30;
@@ -870,7 +879,7 @@ contract RealmClashBattleSystem {
         }
 
         uint256 randomFactor = 85 +
-            (_pseudoRandomNumber(_intelligence + 1) % 31); // 85-116% arena effect
+            (_pseudoRandomNumber(_intelligence + 1) % 35); // 85-120% arena effect
         finalDamage = (modifiedDamage * randomFactor) / 100;
 
         if (finalDamage < 1) {
