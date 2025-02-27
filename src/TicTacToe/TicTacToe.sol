@@ -42,13 +42,7 @@ contract TicTacToe {
 
         // If queue is empty, just add player
         if (playerQueue.length == 0) {
-            playerQueue.push(
-                Player({
-                    playerAddress: msg.sender,
-                    joinedAt: block.timestamp,
-                    isMatched: false
-                })
-            );
+            playerQueue.push(Player({playerAddress: msg.sender, joinedAt: block.timestamp, isMatched: false}));
             isInQueue[msg.sender] = true;
             emit PlayerJoinedQueue(msg.sender, 0);
             return;
@@ -80,7 +74,7 @@ contract TicTacToe {
         require(isInQueue[msg.sender], "Not in queue");
         require(playerToGame[msg.sender] == bytes32(0), "Already in a game");
 
-        for (uint i = 0; i < playerQueue.length; i++) {
+        for (uint256 i = 0; i < playerQueue.length; i++) {
             if (playerQueue[i].playerAddress == msg.sender) {
                 if (i != playerQueue.length - 1) {
                     playerQueue[i] = playerQueue[playerQueue.length - 1];
@@ -99,15 +93,10 @@ contract TicTacToe {
 
         Game storage game = games[gameId];
         require(game.isActive, "Game is not active");
-        require(
-            msg.sender == game.playerX || msg.sender == game.playerO,
-            "Not a player in this game"
-        );
+        require(msg.sender == game.playerX || msg.sender == game.playerO, "Not a player in this game");
 
         // Set the other player as winner
-        address winner = msg.sender == game.playerX
-            ? game.playerO
-            : game.playerX;
+        address winner = msg.sender == game.playerX ? game.playerO : game.playerX;
         game.winner = winner;
         game.isActive = false;
 
@@ -210,11 +199,10 @@ contract TicTacToe {
             [2, 4, 6] // diagonals
         ];
 
-        for (uint i = 0; i < lines.length; i++) {
+        for (uint256 i = 0; i < lines.length; i++) {
             if (
-                board[lines[i][0]] != 0 &&
-                board[lines[i][0]] == board[lines[i][1]] &&
-                board[lines[i][0]] == board[lines[i][2]]
+                board[lines[i][0]] != 0 && board[lines[i][0]] == board[lines[i][1]]
+                    && board[lines[i][0]] == board[lines[i][2]]
             ) {
                 return true;
             }
@@ -223,7 +211,7 @@ contract TicTacToe {
     }
 
     function isDraw(uint8[9] memory board) internal pure returns (bool) {
-        for (uint i = 0; i < 9; i++) {
+        for (uint256 i = 0; i < 9; i++) {
             if (board[i] == 0) {
                 return false;
             }
@@ -231,39 +219,21 @@ contract TicTacToe {
         return true;
     }
 
-    function getGameState(
-        bytes32 gameId
-    )
+    function getGameState(bytes32 gameId)
         external
         view
-        returns (
-            address playerX,
-            address playerO,
-            address winner,
-            bool isActive,
-            uint8[9] memory board,
-            bool isXNext
-        )
+        returns (address playerX, address playerO, address winner, bool isActive, uint8[9] memory board, bool isXNext)
     {
         Game storage game = games[gameId];
-        return (
-            game.playerX,
-            game.playerO,
-            game.winner,
-            game.isActive,
-            game.board,
-            game.isXNext
-        );
+        return (game.playerX, game.playerO, game.winner, game.isActive, game.board, game.isXNext);
     }
 
     function getQueueLength() external view returns (uint256) {
         return playerQueue.length;
     }
 
-    function getPlayerQueuePosition(
-        address player
-    ) external view returns (uint256) {
-        for (uint i = 0; i < playerQueue.length; i++) {
+    function getPlayerQueuePosition(address player) external view returns (uint256) {
+        for (uint256 i = 0; i < playerQueue.length; i++) {
             if (playerQueue[i].playerAddress == player) {
                 return i + 1;
             }

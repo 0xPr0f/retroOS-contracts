@@ -7,7 +7,6 @@ pragma solidity ^0.8.13;
  * Handles battle mechanics including damage calculation, dodge chances, critical hits, and experience rewards
  * @dev V2 is already in production as some complex things that could not be implemented in V1 are been implemented
  */
-
 interface ICharacterCard {
     struct CharacterStats {
         uint256 id;
@@ -29,30 +28,14 @@ interface ICharacterCard {
         uint256 experience;
     }
 
-    function getCharacterStats(
-        uint256 _tokenId
-    ) external view returns (CharacterStats memory);
+    function getCharacterStats(uint256 _tokenId) external view returns (CharacterStats memory);
     function ownerOf(uint256 tokenId) external view returns (address);
-    function calculateHealth(
-        uint256 _characterId
-    ) external view returns (uint256);
-    function calculateDamage(
-        uint256 _characterId
-    ) external view returns (uint256, bool, uint256);
-    function calculateDefense(
-        uint256 _characterId
-    ) external view returns (uint256);
-    function calculateDodgeChance(
-        uint256 _characterId
-    ) external view returns (uint256);
-    function updateBattleResult(
-        uint256 _characterId,
-        bool _isWinner,
-        uint256 _experienceGained
-    ) external;
-    function getEffectiveIntelligence(
-        uint256 _characterId
-    ) external view returns (uint256);
+    function calculateHealth(uint256 _characterId) external view returns (uint256);
+    function calculateDamage(uint256 _characterId) external view returns (uint256, bool, uint256);
+    function calculateDefense(uint256 _characterId) external view returns (uint256);
+    function calculateDodgeChance(uint256 _characterId) external view returns (uint256);
+    function updateBattleResult(uint256 _characterId, bool _isWinner, uint256 _experienceGained) external;
+    function getEffectiveIntelligence(uint256 _characterId) external view returns (uint256);
 }
 
 contract RealmClashBattleSystem {
@@ -136,6 +119,7 @@ contract RealmClashBattleSystem {
         uint256 timeIssued;
         bool isActive;
     }
+
     mapping(address => Challenge[]) public playerChallengers;
     mapping(address => Challenge[]) public playerChallenges;
 
@@ -153,57 +137,22 @@ contract RealmClashBattleSystem {
     uint256 public constant VICTORY_XP = 100;
     uint256 public constant FORFEIT_XP = 20;
 
-    event BattleCreated(
-        uint256 indexed battleId,
-        address indexed player1,
-        uint256 characterId1
-    );
-    event PlayerJoinedBattle(
-        uint256 indexed battleId,
-        address indexed player2,
-        uint256 characterId2
-    );
-    event BattleStarted(
-        uint256 indexed battleId,
-        address player1,
-        address player2
-    );
-    event TurnStarted(
-        uint256 indexed battleId,
-        address currentTurnPlayer,
-        uint8 attackPoints
-    );
+    event BattleCreated(uint256 indexed battleId, address indexed player1, uint256 characterId1);
+    event PlayerJoinedBattle(uint256 indexed battleId, address indexed player2, uint256 characterId2);
+    event BattleStarted(uint256 indexed battleId, address player1, address player2);
+    event TurnStarted(uint256 indexed battleId, address currentTurnPlayer, uint8 attackPoints);
     event AttackPerformed(
-        uint256 indexed battleId,
-        address attacker,
-        string attackType,
-        uint256 damage,
-        bool critical,
-        bool dodged
+        uint256 indexed battleId, address attacker, string attackType, uint256 damage, bool critical, bool dodged
     );
     event TurnEnded(uint256 indexed battleId, address player);
     event BattleCompleted(
-        uint256 indexed battleId,
-        address winner,
-        uint256 winningCharacterId,
-        uint256 experienceGained
+        uint256 indexed battleId, address winner, uint256 winningCharacterId, uint256 experienceGained
     );
     event BattleCanceled(uint256 indexed battleId, string reason);
     event PlayerForfeit(uint256 indexed battleId, address player);
-    event ChallengeIssued(
-        address indexed challenger,
-        address indexed challenged,
-        uint256 characterId
-    );
-    event ChallengeAccepted(
-        address indexed challenger,
-        address indexed challenged,
-        uint256 battleId
-    );
-    event ChallengeRejected(
-        address indexed challenger,
-        address indexed challenged
-    );
+    event ChallengeIssued(address indexed challenger, address indexed challenged, uint256 characterId);
+    event ChallengeAccepted(address indexed challenger, address indexed challenged, uint256 battleId);
+    event ChallengeRejected(address indexed challenger, address indexed challenged);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call this function");
@@ -211,35 +160,25 @@ contract RealmClashBattleSystem {
     }
 
     modifier characterOwner(uint256 _characterId) {
-        require(
-            characterContract.ownerOf(_characterId) == msg.sender,
-            "You don't own this character"
-        );
+        require(characterContract.ownerOf(_characterId) == msg.sender, "You don't own this character");
         _;
     }
 
     modifier activeBattle(uint256 _battleId) {
-        require(
-            battles[_battleId].state == BattleState.InProgress,
-            "Battle is not active"
-        );
+        require(battles[_battleId].state == BattleState.InProgress, "Battle is not active");
         _;
     }
 
     modifier playerInBattle(uint256 _battleId) {
         require(
-            battles[_battleId].player1 == msg.sender ||
-                battles[_battleId].player2 == msg.sender,
+            battles[_battleId].player1 == msg.sender || battles[_battleId].player2 == msg.sender,
             "You are not part of this battle"
         );
         _;
     }
 
     modifier currentTurnPlayer(uint256 _battleId) {
-        require(
-            battles[_battleId].currentTurnPlayer == msg.sender,
-            "Not your turn"
-        );
+        require(battles[_battleId].currentTurnPlayer == msg.sender, "Not your turn");
         _;
     }
 
@@ -249,15 +188,10 @@ contract RealmClashBattleSystem {
         characterContract = ICharacterCard(_characterContractAddress);
     }
 
-    function joinMatchmaking(
-        uint256 _characterId
-    ) external characterOwner(_characterId) {
-        require(
-            activeBattlesByPlayer[msg.sender] == 0,
-            "Already in an active battle"
-        );
+    function joinMatchmaking(uint256 _characterId) external characterOwner(_characterId) {
+        require(activeBattlesByPlayer[msg.sender] == 0, "Already in an active battle");
 
-        for (uint i = 0; i < waitingPlayers.length; i++) {
+        for (uint256 i = 0; i < waitingPlayers.length; i++) {
             if (waitingPlayers[i] == msg.sender) {
                 waitingPlayers[i] = waitingPlayers[waitingPlayers.length - 1];
                 waitingPlayers.pop();
@@ -290,7 +224,7 @@ contract RealmClashBattleSystem {
     }
 
     function leaveMatchmaking() external {
-        for (uint i = 0; i < waitingPlayers.length; i++) {
+        for (uint256 i = 0; i < waitingPlayers.length; i++) {
             if (waitingPlayers[i] == msg.sender) {
                 waitingPlayers[i] = waitingPlayers[waitingPlayers.length - 1];
                 waitingPlayers.pop();
@@ -299,19 +233,11 @@ contract RealmClashBattleSystem {
             }
         }
     }
-    function challengePlayer(
-        address _opponent,
-        uint256 _characterId
-    ) external characterOwner(_characterId) {
+
+    function challengePlayer(address _opponent, uint256 _characterId) external characterOwner(_characterId) {
         require(_opponent != msg.sender, "Cannot challenge yourself");
-        require(
-            activeBattlesByPlayer[msg.sender] == 0,
-            "You are already in a battle"
-        );
-        require(
-            activeBattlesByPlayer[_opponent] == 0,
-            "Opponent is already in a battle"
-        );
+        require(activeBattlesByPlayer[msg.sender] == 0, "You are already in a battle");
+        require(activeBattlesByPlayer[_opponent] == 0, "Opponent is already in a battle");
 
         Challenge memory newChallenge = Challenge({
             challenger: msg.sender,
@@ -327,14 +253,11 @@ contract RealmClashBattleSystem {
         emit ChallengeIssued(msg.sender, _opponent, _characterId);
     }
 
-    function acceptChallenge(
-        address _challenger,
-        uint256 _characterId
-    ) external characterOwner(_characterId) {
+    function acceptChallenge(address _challenger, uint256 _characterId) external characterOwner(_characterId) {
         bool challengeFound = false;
         uint256 challengerCharacterId;
 
-        for (uint i = 0; i < playerChallengers[msg.sender].length; i++) {
+        for (uint256 i = 0; i < playerChallengers[msg.sender].length; i++) {
             Challenge memory challenge = playerChallengers[msg.sender][i];
             if (challenge.challenger == _challenger && challenge.isActive) {
                 challengeFound = true;
@@ -345,24 +268,13 @@ contract RealmClashBattleSystem {
         }
 
         require(challengeFound, "No active challenge from this player");
-        require(
-            activeBattlesByPlayer[msg.sender] == 0,
-            "You are already in a battle"
-        );
-        require(
-            activeBattlesByPlayer[_challenger] == 0,
-            "Challenger is already in a battle"
-        );
+        require(activeBattlesByPlayer[msg.sender] == 0, "You are already in a battle");
+        require(activeBattlesByPlayer[_challenger] == 0, "Challenger is already in a battle");
 
-        uint256 battleId = _createBattle(
-            _challenger,
-            msg.sender,
-            challengerCharacterId,
-            _characterId
-        );
+        uint256 battleId = _createBattle(_challenger, msg.sender, challengerCharacterId, _characterId);
 
         // Deactivate challenge in challenger's list
-        for (uint i = 0; i < playerChallenges[_challenger].length; i++) {
+        for (uint256 i = 0; i < playerChallenges[_challenger].length; i++) {
             if (playerChallenges[_challenger][i].challenged == msg.sender) {
                 playerChallenges[_challenger][i].isActive = false;
                 break;
@@ -372,22 +284,18 @@ contract RealmClashBattleSystem {
         emit ChallengeAccepted(_challenger, msg.sender, battleId);
     }
 
-    function getPlayerChallengers(
-        address _player
-    ) external view returns (Challenge[] memory) {
+    function getPlayerChallengers(address _player) external view returns (Challenge[] memory) {
         return playerChallengers[_player];
     }
 
-    function getPlayerChallenges(
-        address _player
-    ) external view returns (Challenge[] memory) {
+    function getPlayerChallenges(address _player) external view returns (Challenge[] memory) {
         return playerChallenges[_player];
     }
 
     function rejectChallenge(address _challenger) external {
         bool challengeFound = false;
 
-        for (uint i = 0; i < playerChallengers[msg.sender].length; i++) {
+        for (uint256 i = 0; i < playerChallengers[msg.sender].length; i++) {
             Challenge memory challenge = playerChallengers[msg.sender][i];
             if (challenge.challenger == _challenger && challenge.isActive) {
                 playerChallengers[msg.sender][i].isActive = false;
@@ -399,7 +307,7 @@ contract RealmClashBattleSystem {
         require(challengeFound, "No active challenge from this player");
 
         // Deactivate challenge in challenger's list
-        for (uint i = 0; i < playerChallenges[_challenger].length; i++) {
+        for (uint256 i = 0; i < playerChallenges[_challenger].length; i++) {
             if (playerChallenges[_challenger][i].challenged == msg.sender) {
                 playerChallenges[_challenger][i].isActive = false;
                 break;
@@ -409,12 +317,10 @@ contract RealmClashBattleSystem {
         emit ChallengeRejected(_challenger, msg.sender);
     }
 
-    function _createBattle(
-        address _player1,
-        address _player2,
-        uint256 _characterId1,
-        uint256 _characterId2
-    ) internal returns (uint256) {
+    function _createBattle(address _player1, address _player2, uint256 _characterId1, uint256 _characterId2)
+        internal
+        returns (uint256)
+    {
         battleCounter++;
         uint256 newBattleId = battleCounter;
 
@@ -444,23 +350,12 @@ contract RealmClashBattleSystem {
     }
 
     function _createBattleSnapshots(Battle storage battle) internal {
-        ICharacterCard.CharacterStats memory stats1 = characterContract
-            .getCharacterStats(battle.characterId1);
-        uint256 health1 = characterContract.calculateHealth(
-            battle.characterId1
-        );
-        uint256 defense1 = characterContract.calculateDefense(
-            battle.characterId1
-        );
-        uint256 dodgeChance1 = characterContract.calculateDodgeChance(
-            battle.characterId1
-        );
-        (uint256 attack1, , ) = characterContract.calculateDamage(
-            battle.characterId1
-        );
-        uint24 intelligence1 = uint24(
-            characterContract.getEffectiveIntelligence(battle.characterId1)
-        );
+        ICharacterCard.CharacterStats memory stats1 = characterContract.getCharacterStats(battle.characterId1);
+        uint256 health1 = characterContract.calculateHealth(battle.characterId1);
+        uint256 defense1 = characterContract.calculateDefense(battle.characterId1);
+        uint256 dodgeChance1 = characterContract.calculateDodgeChance(battle.characterId1);
+        (uint256 attack1,,) = characterContract.calculateDamage(battle.characterId1);
+        uint24 intelligence1 = uint24(characterContract.getEffectiveIntelligence(battle.characterId1));
 
         battle.snapshot1 = BattleSnapshot({
             characterId: battle.characterId1,
@@ -474,23 +369,12 @@ contract RealmClashBattleSystem {
             hasForfeit: false
         });
 
-        ICharacterCard.CharacterStats memory stats2 = characterContract
-            .getCharacterStats(battle.characterId2);
-        uint256 health2 = characterContract.calculateHealth(
-            battle.characterId2
-        );
-        uint256 defense2 = characterContract.calculateDefense(
-            battle.characterId2
-        );
-        uint256 dodgeChance2 = characterContract.calculateDodgeChance(
-            battle.characterId2
-        );
-        (uint256 attack2, , ) = characterContract.calculateDamage(
-            battle.characterId2
-        );
-        uint24 intelligence2 = uint24(
-            characterContract.getEffectiveIntelligence(battle.characterId2)
-        );
+        ICharacterCard.CharacterStats memory stats2 = characterContract.getCharacterStats(battle.characterId2);
+        uint256 health2 = characterContract.calculateHealth(battle.characterId2);
+        uint256 defense2 = characterContract.calculateDefense(battle.characterId2);
+        uint256 dodgeChance2 = characterContract.calculateDodgeChance(battle.characterId2);
+        (uint256 attack2,,) = characterContract.calculateDamage(battle.characterId2);
+        uint24 intelligence2 = uint24(characterContract.getEffectiveIntelligence(battle.characterId2));
 
         battle.snapshot2 = BattleSnapshot({
             characterId: battle.characterId2,
@@ -513,25 +397,17 @@ contract RealmClashBattleSystem {
             battle.currentTurnPlayer = battle.player2;
             battle.turnState = TurnState.Player2Turn;
         }
-        battle.player1AttackPoints = uint8(
-            _generateAttackPoints(battle.snapshot1.intelligence)
-        );
-        battle.player2AttackPoints = uint8(
-            _generateAttackPoints(battle.snapshot2.intelligence)
-        );
+        battle.player1AttackPoints = uint8(_generateAttackPoints(battle.snapshot1.intelligence));
+        battle.player2AttackPoints = uint8(_generateAttackPoints(battle.snapshot2.intelligence));
 
         emit TurnStarted(
             battle.battleId,
             battle.currentTurnPlayer,
-            battle.currentTurnPlayer == battle.player1
-                ? battle.player1AttackPoints
-                : battle.player2AttackPoints
+            battle.currentTurnPlayer == battle.player1 ? battle.player1AttackPoints : battle.player2AttackPoints
         );
     }
 
-    function _generateAttackPoints(
-        uint24 intelligence
-    ) internal view returns (uint24) {
+    function _generateAttackPoints(uint24 intelligence) internal view returns (uint24) {
         uint256 rand = _pseudoRandomNumber(intelligence) % 15;
         uint24 basePoints = uint24(4 + rand);
 
@@ -545,17 +421,16 @@ contract RealmClashBattleSystem {
         return totalPoints;
     }
 
-    function performAttack(
-        uint256 _battleId,
-        uint8 _attackType
-    ) external activeBattle(_battleId) currentTurnPlayer(_battleId) {
+    function performAttack(uint256 _battleId, uint8 _attackType)
+        external
+        activeBattle(_battleId)
+        currentTurnPlayer(_battleId)
+    {
         Battle storage battle = battles[_battleId];
 
         if (
-            (battle.turnState == TurnState.Player1Turn &&
-                battle.player1TurnEnded) ||
-            (battle.turnState == TurnState.Player2Turn &&
-                battle.player2TurnEnded)
+            (battle.turnState == TurnState.Player1Turn && battle.player1TurnEnded)
+                || (battle.turnState == TurnState.Player2Turn && battle.player2TurnEnded)
         ) {
             revert("You've already ended your turn");
         }
@@ -581,9 +456,7 @@ contract RealmClashBattleSystem {
             revert("Invalid attack type");
         }
 
-        uint8 playerAttackPoints = isPlayer1
-            ? battle.player1AttackPoints
-            : battle.player2AttackPoints;
+        uint8 playerAttackPoints = isPlayer1 ? battle.player1AttackPoints : battle.player2AttackPoints;
         require(playerAttackPoints >= attackCost, "Not enough attack points");
 
         // Deduct points
@@ -593,19 +466,11 @@ contract RealmClashBattleSystem {
             battle.player2AttackPoints -= attackCost;
         }
 
-        BattleSnapshot storage attacker = isPlayer1
-            ? battle.snapshot1
-            : battle.snapshot2;
-        BattleSnapshot storage defender = isPlayer1
-            ? battle.snapshot2
-            : battle.snapshot1;
+        BattleSnapshot storage attacker = isPlayer1 ? battle.snapshot1 : battle.snapshot2;
+        BattleSnapshot storage defender = isPlayer1 ? battle.snapshot2 : battle.snapshot1;
 
-        (uint256 damage, bool isCritical) = _calculateBattleDamage(
-            attacker.attack,
-            defender.defense,
-            attacker.intelligence,
-            damageMultiplier
-        );
+        (uint256 damage, bool isCritical) =
+            _calculateBattleDamage(attacker.attack, defender.defense, attacker.intelligence, damageMultiplier);
 
         bool isDodged = _checkDodge(defender.dodgeChance);
 
@@ -619,23 +484,9 @@ contract RealmClashBattleSystem {
             damage = 0;
         }
 
-        _recordBattleAction(
-            battle,
-            msg.sender,
-            attackTypeStr,
-            damage,
-            isCritical,
-            isDodged
-        );
+        _recordBattleAction(battle, msg.sender, attackTypeStr, damage, isCritical, isDodged);
 
-        emit AttackPerformed(
-            _battleId,
-            msg.sender,
-            attackTypeStr,
-            damage,
-            isCritical,
-            isDodged
-        );
+        emit AttackPerformed(_battleId, msg.sender, attackTypeStr, damage, isCritical, isDodged);
 
         if (defender.currentHealth == 0) {
             _endBattle(_battleId, isPlayer1);
@@ -654,17 +505,13 @@ contract RealmClashBattleSystem {
         emit TurnStarted(
             battle.battleId,
             battle.currentTurnPlayer,
-            battle.currentTurnPlayer == battle.player1
-                ? battle.player1AttackPoints
-                : battle.player2AttackPoints
+            battle.currentTurnPlayer == battle.player1 ? battle.player1AttackPoints : battle.player2AttackPoints
         );
 
         battle.lastActionTime = block.timestamp;
     }
 
-    function endTurn(
-        uint256 _battleId
-    ) external activeBattle(_battleId) currentTurnPlayer(_battleId) {
+    function endTurn(uint256 _battleId) external activeBattle(_battleId) currentTurnPlayer(_battleId) {
         Battle storage battle = battles[_battleId];
 
         bool isPlayer1 = (msg.sender == battle.player1);
@@ -694,9 +541,7 @@ contract RealmClashBattleSystem {
         emit TurnStarted(
             battle.battleId,
             battle.currentTurnPlayer,
-            battle.currentTurnPlayer == battle.player1
-                ? battle.player1AttackPoints
-                : battle.player2AttackPoints
+            battle.currentTurnPlayer == battle.player1 ? battle.player1AttackPoints : battle.player2AttackPoints
         );
 
         battle.lastActionTime = block.timestamp;
@@ -709,12 +554,8 @@ contract RealmClashBattleSystem {
         battle.player1TurnEnded = false;
         battle.player2TurnEnded = false;
 
-        battle.player1AttackPoints = uint8(
-            _generateAttackPoints(battle.snapshot1.intelligence)
-        );
-        battle.player2AttackPoints = uint8(
-            _generateAttackPoints(battle.snapshot2.intelligence)
-        );
+        battle.player1AttackPoints = uint8(_generateAttackPoints(battle.snapshot1.intelligence));
+        battle.player2AttackPoints = uint8(_generateAttackPoints(battle.snapshot2.intelligence));
 
         if (battle.currentTurnPlayer == battle.player1) {
             battle.turnState = TurnState.Player2Turn;
@@ -727,15 +568,11 @@ contract RealmClashBattleSystem {
         emit TurnStarted(
             battle.battleId,
             battle.currentTurnPlayer,
-            battle.currentTurnPlayer == battle.player1
-                ? battle.player1AttackPoints
-                : battle.player2AttackPoints
+            battle.currentTurnPlayer == battle.player1 ? battle.player1AttackPoints : battle.player2AttackPoints
         );
     }
 
-    function forfeitBattle(
-        uint256 _battleId
-    ) external activeBattle(_battleId) playerInBattle(_battleId) {
+    function forfeitBattle(uint256 _battleId) external activeBattle(_battleId) playerInBattle(_battleId) {
         Battle storage battle = battles[_battleId];
 
         bool isPlayer1Forfeiting = (msg.sender == battle.player1);
@@ -773,42 +610,23 @@ contract RealmClashBattleSystem {
         battle.winner = winner;
         battle.winningCharacterId = winningCharacterId;
 
-        bool wasForfeit = (battle.snapshot1.hasForfeit ||
-            battle.snapshot2.hasForfeit);
+        bool wasForfeit = (battle.snapshot1.hasForfeit || battle.snapshot2.hasForfeit);
         experienceGained = wasForfeit ? FORFEIT_XP : VICTORY_XP;
 
-        characterContract.updateBattleResult(
-            winningCharacterId,
-            true,
-            experienceGained
-        );
+        characterContract.updateBattleResult(winningCharacterId, true, experienceGained);
 
-        uint256 losingCharacterId = _isPlayer1Winner
-            ? battle.characterId2
-            : battle.characterId1;
-        characterContract.updateBattleResult(
-            losingCharacterId,
-            false,
-            wasForfeit ? FORFEIT_XP : VICTORY_XP
-        );
+        uint256 losingCharacterId = _isPlayer1Winner ? battle.characterId2 : battle.characterId1;
+        characterContract.updateBattleResult(losingCharacterId, false, wasForfeit ? FORFEIT_XP : VICTORY_XP);
 
         delete activeBattlesByPlayer[battle.player1];
         delete activeBattlesByPlayer[battle.player2];
 
-        emit BattleCompleted(
-            _battleId,
-            winner,
-            winningCharacterId,
-            experienceGained
-        );
+        emit BattleCompleted(_battleId, winner, winningCharacterId, experienceGained);
     }
 
     function checkBattleTimeout(uint256 _battleId) external {
         Battle storage battle = battles[_battleId];
-        require(
-            battle.state == BattleState.InProgress,
-            "Battle is not in progress"
-        );
+        require(battle.state == BattleState.InProgress, "Battle is not in progress");
 
         if (block.timestamp > battle.lastActionTime + BATTLE_TIMEOUT) {
             _cancelBattle(_battleId, "Battle timed out");
@@ -817,10 +635,7 @@ contract RealmClashBattleSystem {
 
     function checkTurnTimeout(uint256 _battleId) external {
         Battle storage battle = battles[_battleId];
-        require(
-            battle.state == BattleState.InProgress,
-            "Battle is not in progress"
-        );
+        require(battle.state == BattleState.InProgress, "Battle is not in progress");
 
         if (block.timestamp > battle.lastActionTime + TURN_TIMEOUT) {
             address inactivePlayer = battle.currentTurnPlayer;
@@ -832,14 +647,7 @@ contract RealmClashBattleSystem {
                 battle.snapshot2.hasForfeit = true;
             }
 
-            _recordBattleAction(
-                battle,
-                inactivePlayer,
-                "timeout",
-                0,
-                false,
-                false
-            );
+            _recordBattleAction(battle, inactivePlayer, "timeout", 0, false, false);
 
             _endBattle(_battleId, !isPlayer1Inactive);
         }
@@ -882,8 +690,7 @@ contract RealmClashBattleSystem {
             modifiedDamage = (modifiedDamage * 150) / 100;
         }
 
-        uint256 randomFactor = 85 +
-            (_pseudoRandomNumber(_intelligence + 1) % 31); // 85-116% arena effect
+        uint256 randomFactor = 85 + (_pseudoRandomNumber(_intelligence + 1) % 31); // 85-116% arena effect
         finalDamage = (modifiedDamage * randomFactor) / 100;
 
         if (finalDamage < 1) {
@@ -898,16 +705,7 @@ contract RealmClashBattleSystem {
     }
 
     function _pseudoRandomNumber(uint256 seed) internal view returns (uint256) {
-        return
-            uint256(
-                keccak256(
-                    abi.encodePacked(
-                        blockhash(block.number - 1),
-                        block.timestamp,
-                        seed
-                    )
-                )
-            );
+        return uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), block.timestamp, seed)));
     }
 
     function _recordBattleAction(
@@ -937,13 +735,9 @@ contract RealmClashBattleSystem {
         return activeBattlesByPlayer[_player];
     }
 
-    function getBattleActionLog(
-        uint256 _battleId
-    ) external view returns (BattleAction[] memory) {
+    function getBattleActionLog(uint256 _battleId) external view returns (BattleAction[] memory) {
         Battle storage battle = battles[_battleId];
-        BattleAction[] memory actions = new BattleAction[](
-            battle.actionLog.length
-        );
+        BattleAction[] memory actions = new BattleAction[](battle.actionLog.length);
 
         for (uint256 i = 0; i < battle.actionLog.length; i++) {
             actions[i] = actionLogs[battle.actionLog[i]];
@@ -952,34 +746,22 @@ contract RealmClashBattleSystem {
         return actions;
     }
 
-    function getCurrentTurnInfo(
-        uint256 _battleId
-    )
+    function getCurrentTurnInfo(uint256 _battleId)
         external
         view
-        returns (
-            address currentPlayer,
-            uint8 remainingAttackPoints,
-            bool turnEnded
-        )
+        returns (address currentPlayer, uint8 remainingAttackPoints, bool turnEnded)
     {
         Battle storage battle = battles[_battleId];
         bool isPlayer1Turn = (battle.turnState == TurnState.Player1Turn);
 
         return (
             battle.currentTurnPlayer,
-            isPlayer1Turn
-                ? battle.player1AttackPoints
-                : battle.player2AttackPoints,
+            isPlayer1Turn ? battle.player1AttackPoints : battle.player2AttackPoints,
             isPlayer1Turn ? battle.player1TurnEnded : battle.player2TurnEnded
         );
     }
 
-    function getWaitingPlayers()
-        external
-        view
-        returns (address[] memory players, uint256[] memory characterIds)
-    {
+    function getWaitingPlayers() external view returns (address[] memory players, uint256[] memory characterIds) {
         players = new address[](waitingPlayers.length);
         characterIds = new uint256[](waitingPlayers.length);
 
@@ -991,19 +773,13 @@ contract RealmClashBattleSystem {
         return (players, characterIds);
     }
 
-    function getPendingChallenge(
-        address _challenger,
-        address _challenged
-    ) external view returns (uint256) {
+    function getPendingChallenge(address _challenger, address _challenged) external view returns (uint256) {
         return pendingChallenges[_challenger][_challenged];
     }
 
     function emergencyCancelBattle(uint256 _battleId) external onlyOwner {
         Battle storage battle = battles[_battleId];
-        require(
-            battle.state == BattleState.InProgress,
-            "Battle is not in progress"
-        );
+        require(battle.state == BattleState.InProgress, "Battle is not in progress");
 
         _cancelBattle(_battleId, "Emergency cancellation by admin");
     }
@@ -1021,9 +797,7 @@ contract RealmClashBattleSystem {
         TURN_TIMEOUT = _newTimeout;
     }
 
-    function getBattleProgress(
-        uint256 _battleId
-    )
+    function getBattleProgress(uint256 _battleId)
         external
         view
         returns (
@@ -1041,12 +815,9 @@ contract RealmClashBattleSystem {
         for (uint256 i = 0; i < battle.actionLog.length; i++) {
             BattleAction memory action = actionLogs[battle.actionLog[i]];
             if (
-                keccak256(bytes(action.actionType)) ==
-                keccak256(bytes("normal")) ||
-                keccak256(bytes(action.actionType)) ==
-                keccak256(bytes("special1")) ||
-                keccak256(bytes(action.actionType)) ==
-                keccak256(bytes("special2"))
+                keccak256(bytes(action.actionType)) == keccak256(bytes("normal"))
+                    || keccak256(bytes(action.actionType)) == keccak256(bytes("special1"))
+                    || keccak256(bytes(action.actionType)) == keccak256(bytes("special2"))
             ) {
                 totalDamage += action.value;
             }
@@ -1062,10 +833,7 @@ contract RealmClashBattleSystem {
         );
     }
 
-    function getPlayerStatus(
-        uint256 _battleId,
-        address _player
-    )
+    function getPlayerStatus(uint256 _battleId, address _player)
         external
         view
         returns (
@@ -1078,15 +846,10 @@ contract RealmClashBattleSystem {
         )
     {
         Battle storage battle = battles[_battleId];
-        require(
-            _player == battle.player1 || _player == battle.player2,
-            "Player not in battle"
-        );
+        require(_player == battle.player1 || _player == battle.player2, "Player not in battle");
 
         bool isPlayer1 = (_player == battle.player1);
-        BattleSnapshot storage playerSnapshot = isPlayer1
-            ? battle.snapshot1
-            : battle.snapshot2;
+        BattleSnapshot storage playerSnapshot = isPlayer1 ? battle.snapshot1 : battle.snapshot2;
 
         uint256 dealtDamage = 0;
         uint256 receivedDamage = 0;
@@ -1095,12 +858,9 @@ contract RealmClashBattleSystem {
             BattleAction memory action = actionLogs[battle.actionLog[i]];
 
             if (
-                keccak256(bytes(action.actionType)) ==
-                keccak256(bytes("normal")) ||
-                keccak256(bytes(action.actionType)) ==
-                keccak256(bytes("special1")) ||
-                keccak256(bytes(action.actionType)) ==
-                keccak256(bytes("special2"))
+                keccak256(bytes(action.actionType)) == keccak256(bytes("normal"))
+                    || keccak256(bytes(action.actionType)) == keccak256(bytes("special1"))
+                    || keccak256(bytes(action.actionType)) == keccak256(bytes("special2"))
             ) {
                 if (action.player == _player) {
                     dealtDamage += action.value;
@@ -1120,23 +880,16 @@ contract RealmClashBattleSystem {
         );
     }
 
-    function getBattleSnapshots(
-        uint256 _battleId
-    )
+    function getBattleSnapshots(uint256 _battleId)
         external
         view
-        returns (
-            BattleSnapshot memory snapshot1,
-            BattleSnapshot memory snapshot2
-        )
+        returns (BattleSnapshot memory snapshot1, BattleSnapshot memory snapshot2)
     {
         Battle storage battle = battles[_battleId];
         return (battle.snapshot1, battle.snapshot2);
     }
 
-    function getBattleDetails(
-        uint256 _battleId
-    )
+    function getBattleDetails(uint256 _battleId)
         external
         view
         returns (

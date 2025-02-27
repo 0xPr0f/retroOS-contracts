@@ -52,32 +52,16 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
     mapping(uint256 => Battle) public battles;
     mapping(bytes32 => uint256) public requestToBattle;
 
-    event WarriorCreated(
-        uint256 indexed id,
-        address indexed owner,
-        string name
-    );
+    event WarriorCreated(uint256 indexed id, address indexed owner, string name);
     event BattleInitiated(
-        uint256 indexed battleId,
-        uint256 indexed challengerId,
-        uint256 indexed defenderId,
-        bytes32 initiateBattled
+        uint256 indexed battleId, uint256 indexed challengerId, uint256 indexed defenderId, bytes32 initiateBattled
     );
-    event BattleCompleted(
-        uint256 indexed battleId,
-        uint256 indexed winner,
-        uint256 indexed loser
-    );
+    event BattleCompleted(uint256 indexed battleId, uint256 indexed winner, uint256 indexed loser);
     event VeteranStatusAchieved(uint256 indexed warriorId);
 
     uint256 public constant BATTLE_COOLDOWN = 1 hours;
 
-    constructor(
-        address vrfCoordinator,
-        address linkToken,
-        bytes32 _keyHash,
-        uint256 _fee
-    )
+    constructor(address vrfCoordinator, address linkToken, bytes32 _keyHash, uint256 _fee)
         ERC721("Warrior Combat", "WARRIOR")
         VRFConsumerBase(vrfCoordinator, linkToken)
         Ownable(msg.sender)
@@ -96,25 +80,17 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
     ) external payable returns (uint256) {
         require(msg.value >= MINT_PRICE, "Insufficient payment");
         require(
-            strength >= MIN_STAT &&
-                defense >= MIN_STAT &&
-                agility >= MIN_STAT &&
-                vitality >= MIN_STAT &&
-                intelligence >= MIN_STAT,
+            strength >= MIN_STAT && defense >= MIN_STAT && agility >= MIN_STAT && vitality >= MIN_STAT
+                && intelligence >= MIN_STAT,
             "Stats below minimum"
         );
         require(
-            strength <= MAX_STAT &&
-                defense <= MAX_STAT &&
-                agility <= MAX_STAT &&
-                vitality <= MAX_STAT &&
-                intelligence <= MAX_STAT,
+            strength <= MAX_STAT && defense <= MAX_STAT && agility <= MAX_STAT && vitality <= MAX_STAT
+                && intelligence <= MAX_STAT,
             "Stats above maximum"
         );
         require(
-            strength + defense + agility + vitality + intelligence ==
-                STAT_POINTS,
-            "Must use exactly 200 stat points"
+            strength + defense + agility + vitality + intelligence == STAT_POINTS, "Must use exactly 200 stat points"
         );
         uint256 newWarriorId = ++_tokenIdsCounter;
         _safeMint(msg.sender, newWarriorId);
@@ -135,29 +111,17 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         return newWarriorId;
     }
 
-    function initiateBattle(
-        uint256 challengerId,
-        uint256 defenderId
-    ) external payable {
+    function initiateBattle(uint256 challengerId, uint256 defenderId) external payable {
         require(msg.value >= BATTLE_FEE, "Insufficient battle fee");
         require(ownerOf(challengerId) == msg.sender, "Not owner of challenger");
-        require(
-            ownerOf(challengerId) != ownerOf(defenderId),
-            "Cannot battle your own warrior"
-        );
+        require(ownerOf(challengerId) != ownerOf(defenderId), "Cannot battle your own warrior");
         if (warriors[challengerId].lastBattleTime != 0) {
             require(
-                block.timestamp >=
-                    warriors[challengerId].lastBattleTime + BATTLE_COOLDOWN,
-                "Challenger on cooldown"
+                block.timestamp >= warriors[challengerId].lastBattleTime + BATTLE_COOLDOWN, "Challenger on cooldown"
             );
         }
         if (warriors[defenderId].lastBattleTime != 0) {
-            require(
-                block.timestamp >=
-                    warriors[defenderId].lastBattleTime + BATTLE_COOLDOWN,
-                "Defender on cooldown"
-            );
+            require(block.timestamp >= warriors[defenderId].lastBattleTime + BATTLE_COOLDOWN, "Defender on cooldown");
         }
 
         warriors[challengerId].lastBattleTime = block.timestamp;
@@ -171,19 +135,13 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
             timestamp: block.timestamp,
             completed: false
         });
-        require(
-            LINK.balanceOf(address(this)) >= fee,
-            "Not enough LINK for VRF"
-        );
+        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK for VRF");
         bytes32 requestId = requestRandomness(keyHash, fee);
         requestToBattle[requestId] = battleId;
         emit BattleInitiated(battleId, challengerId, defenderId, requestId);
     }
 
-    function fulfillRandomness(
-        bytes32 requestId,
-        uint256 randomness
-    ) internal override {
+    function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
         uint256 battleId = requestToBattle[requestId];
         emit BattleInitiated(0, 0, battleId, requestId);
         require(battleId > 0, "Battle not found");
@@ -193,11 +151,7 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         uint256 defenderId = battle.defender;
         Warrior storage challenger = warriors[challengerId];
         Warrior storage defender = warriors[defenderId];
-        uint256 winnerTokenId = _determineWinner(
-            challenger,
-            defender,
-            randomness
-        );
+        uint256 winnerTokenId = _determineWinner(challenger, defender, randomness);
         battle.winner = winnerTokenId;
         battle.completed = true;
         if (winnerTokenId == challengerId) {
@@ -215,49 +169,30 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
                 emit VeteranStatusAchieved(defenderId);
             }
         }
-        emit BattleCompleted(
-            battleId,
-            winnerTokenId,
-            winnerTokenId == challengerId ? defenderId : challengerId
-        );
+        emit BattleCompleted(battleId, winnerTokenId, winnerTokenId == challengerId ? defenderId : challengerId);
     }
 
-    function _determineWinner(
-        Warrior storage challenger,
-        Warrior storage defender,
-        uint256 randomness
-    ) private view returns (uint256) {
+    function _determineWinner(Warrior storage challenger, Warrior storage defender, uint256 randomness)
+        private
+        view
+        returns (uint256)
+    {
         uint256 challengerAttackPower = _calculateAttackPower(
-            challenger.strength,
-            challenger.agility,
-            challenger.intelligence,
-            uint16(randomness % 1000)
+            challenger.strength, challenger.agility, challenger.intelligence, uint16(randomness % 1000)
         );
         uint256 defenderDefensePower = _calculateDefensePower(
-            defender.defense,
-            defender.agility,
-            defender.vitality,
-            uint16((randomness / 1000) % 1000)
+            defender.defense, defender.agility, defender.vitality, uint16((randomness / 1000) % 1000)
         );
-        uint256 damageToDefender = challengerAttackPower > defenderDefensePower
-            ? challengerAttackPower - defenderDefensePower
-            : 1;
+        uint256 damageToDefender =
+            challengerAttackPower > defenderDefensePower ? challengerAttackPower - defenderDefensePower : 1;
         uint256 defenderAttackPower = _calculateAttackPower(
-            defender.strength,
-            defender.agility,
-            defender.intelligence,
-            uint16((randomness / 1000000) % 1000)
+            defender.strength, defender.agility, defender.intelligence, uint16((randomness / 1000000) % 1000)
         );
         uint256 challengerDefensePower = _calculateDefensePower(
-            challenger.defense,
-            challenger.agility,
-            challenger.vitality,
-            uint16((randomness / 1000000000) % 1000)
+            challenger.defense, challenger.agility, challenger.vitality, uint16((randomness / 1000000000) % 1000)
         );
-        uint256 damageToChallenger = defenderAttackPower >
-            challengerDefensePower
-            ? defenderAttackPower - challengerDefensePower
-            : 1;
+        uint256 damageToChallenger =
+            defenderAttackPower > challengerDefensePower ? defenderAttackPower - challengerDefensePower : 1;
         uint256 challengerHP = challenger.vitality * 10;
         uint256 defenderHP = defender.vitality * 10;
         uint256 hitsTillChallengerDefeated = challengerHP / damageToChallenger;
@@ -269,12 +204,11 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         }
     }
 
-    function _calculateAttackPower(
-        uint8 strength,
-        uint8 agility,
-        uint8 intelligence,
-        uint16 randFactor
-    ) private pure returns (uint256) {
+    function _calculateAttackPower(uint8 strength, uint8 agility, uint8 intelligence, uint16 randFactor)
+        private
+        pure
+        returns (uint256)
+    {
         uint256 baseDamage = strength * 5;
         uint256 hitChance = 70 + ((agility * 25) / 100);
         uint256 critChance = 5 + ((intelligence * 20) / 100);
@@ -284,12 +218,11 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         return isCritical ? baseDamage * 2 : baseDamage;
     }
 
-    function _calculateDefensePower(
-        uint8 defense,
-        uint8 agility,
-        uint8 vitality,
-        uint16 randFactor
-    ) private pure returns (uint256) {
+    function _calculateDefensePower(uint8 defense, uint8 agility, uint8 vitality, uint16 randFactor)
+        private
+        pure
+        returns (uint256)
+    {
         uint256 baseDefense = defense * 3;
         uint256 dodgeChance = 5 + ((agility * 20) / 100);
         uint256 vitalityBonus = (vitality * 20) / 100;
@@ -298,9 +231,7 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         return baseDefense + ((baseDefense * vitalityBonus) / 100);
     }
 
-    function getWarrior(
-        uint256 warriorId
-    ) external view returns (Warrior memory) {
+    function getWarrior(uint256 warriorId) external view returns (Warrior memory) {
         require(warriors[warriorId].id != 0, "Warrior does not exist");
         return warriors[warriorId];
     }
@@ -310,9 +241,7 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
         return battles[battleId];
     }
 
-    function getWarriorsByOwner(
-        address owner
-    ) external view returns (uint256[] memory) {
+    function getWarriorsByOwner(address owner) external view returns (uint256[] memory) {
         uint256 balance = balanceOf(owner);
         uint256[] memory result = new uint256[](balance);
         for (uint256 i = 0; i < balance; i++) {
@@ -321,11 +250,13 @@ contract RealmClashRNGCombat is ERC721Enumerable, Ownable, VRFConsumerBase {
 
         return result;
     }
+
     function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
-        (bool success, ) = owner().call{value: balance}("");
+        (bool success,) = owner().call{value: balance}("");
         require(success, "Withdrawal failed");
     }
+
     function withdrawLink(uint256 amount) external onlyOwner {
         require(LINK.transfer(owner(), amount), "LINK transfer failed");
     }

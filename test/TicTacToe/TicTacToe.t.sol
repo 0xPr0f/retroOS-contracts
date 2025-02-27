@@ -14,6 +14,7 @@ contract TicTacToeTest is Test {
     address public player2;
     address public player3;
     address public player4;
+
     function setUp() public {
         player1 = makeAddr("player1");
         player2 = makeAddr("player2");
@@ -52,14 +53,8 @@ contract TicTacToeTest is Test {
         assertEq(game.getCurrentGame(player2), gameId);
 
         // Get initial game state
-        (
-            address playerX,
-            address playerO,
-            address winner,
-            bool isActive,
-            uint8[9] memory board,
-            bool isXNext
-        ) = game.getGameState(gameId);
+        (address playerX, address playerO, address winner, bool isActive, uint8[9] memory board, bool isXNext) =
+            game.getGameState(gameId);
 
         // Verify initial state
         assertEq(playerX, player1);
@@ -89,8 +84,7 @@ contract TicTacToeTest is Test {
         game.makeMove(gameId, 2); // top right [X, X, X, O, O, _, _, _, _]
 
         // Verify final state
-        (playerX, playerO, winner, isActive, board, isXNext) = game
-            .getGameState(gameId);
+        (playerX, playerO, winner, isActive, board, isXNext) = game.getGameState(gameId);
 
         assertEq(winner, player1);
         assertFalse(isActive);
@@ -188,18 +182,16 @@ contract TicTacToeTest is Test {
         /*0X 1O 2X
           3O 4X 50
           6O 7O 8X
-*/
+        */
 
         // Get game state after draw
-        (, , , bool isActive, uint8[9] memory board, ) = game.getGameState(
-            gameId
-        );
+        (,,, bool isActive, uint8[9] memory board,) = game.getGameState(gameId);
 
         // Game should still be active after draw and reset
         assertTrue(isActive);
 
         // Board should be reset to empty
-        for (uint i = 0; i < 9; i++) {
+        for (uint256 i = 0; i < 9; i++) {
             assertEq(board[i], 0);
         }
 
@@ -242,6 +234,7 @@ contract TicTacToeTest is Test {
         vm.expectRevert();
         game.leaveQueue();
     }
+
     function test_CanRestartGameAfterEnd() public {
         playFullGame();
         // Skip a time to avoid duplicate timestamp
@@ -269,14 +262,8 @@ contract TicTacToeTest is Test {
         assertEq(game.getCurrentGame(player2), gameId);
 
         // Get initial game state
-        (
-            address playerX,
-            address playerO,
-            address winner,
-            bool isActive,
-            uint8[9] memory board,
-            bool isXNext
-        ) = game.getGameState(gameId);
+        (address playerX, address playerO, address winner, bool isActive, uint8[9] memory board, bool isXNext) =
+            game.getGameState(gameId);
 
         // Verify initial state
         assertEq(playerX, player1);
@@ -306,11 +293,11 @@ contract TicTacToeTest is Test {
         game.makeMove(gameId, 2); // top right [X, X, X, O, O, _, _, _, _]
 
         // Verify final state
-        (playerX, playerO, winner, isActive, board, isXNext) = game
-            .getGameState(gameId);
+        (playerX, playerO, winner, isActive, board, isXNext) = game.getGameState(gameId);
 
         assertEq(winner, player1);
     }
+
     function test_FourPlayersJoinTwoGames() public {
         vm.prank(player1);
         game.joinQueue();

@@ -22,9 +22,7 @@ interface WeaponInterface {
         uint256 equippedCharacterId;
     }
 
-    function getWeaponStats(
-        uint256 _weaponId
-    ) external view returns (WeaponStats memory);
+    function getWeaponStats(uint256 _weaponId) external view returns (WeaponStats memory);
     function ownerOf(uint256 tokenId) external view returns (address);
 }
 
@@ -41,9 +39,7 @@ interface ArmorInterface {
         uint256 equippedCharacterId;
     }
 
-    function getArmorStats(
-        uint256 _armorId
-    ) external view returns (ArmorStats memory);
+    function getArmorStats(uint256 _armorId) external view returns (ArmorStats memory);
     function ownerOf(uint256 tokenId) external view returns (address);
 }
 
@@ -61,6 +57,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         Knight, //4 High strength, high defense, low magic, low intelligence
         Demon, //5 High strength, high magic, low defense, low intelligence
         God //6 Balanced high stats, no weaknesses, overpowered
+
     }
 
     struct CharacterStats {
@@ -220,10 +217,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
     }
 
     modifier onlyMinter() {
-        require(
-            _allowedMinters[msg.sender] || msg.sender == address(this),
-            "Not authorized to mint or Not contract"
-        );
+        require(_allowedMinters[msg.sender] || msg.sender == address(this), "Not authorized to mint or Not contract");
         _;
     }
 
@@ -260,10 +254,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         return newTokenId;
     }
 
-    function setTokenUriBackdoor(
-        uint256 _tokenId,
-        string memory _uri
-    ) external onlyMinter {
+    function setTokenUriBackdoor(uint256 _tokenId, string memory _uri) external onlyMinter {
         _setTokenURI(_tokenId, _uri);
     }
 
@@ -279,7 +270,8 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         uint8 _classId
     )
         external
-        /*onlyMinter*/ characterExists(_tokenIdCounter)
+        /*onlyMinter*/
+        characterExists(_tokenIdCounter)
         returns (uint256)
     {
         uint256 _tokenId = mint(msg.sender, _uri);
@@ -322,57 +314,36 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         return _tokenId;
     }
 
-    function equipWeapon(
-        uint256 _characterId,
-        uint256 _weaponId
-    ) external onlyOwnerOf(_characterId) {
+    function equipWeapon(uint256 _characterId, uint256 _weaponId) external onlyOwnerOf(_characterId) {
         require(weaponContractAddress != address(0), "Weapon contract not set");
-        require(
-            WeaponInterface(weaponContractAddress).ownerOf(_weaponId) ==
-                msg.sender,
-            "Not the weapon owner"
-        );
+        require(WeaponInterface(weaponContractAddress).ownerOf(_weaponId) == msg.sender, "Not the weapon owner");
 
         characters[_characterId].weaponId = _weaponId;
         emit WeaponEquipped(_characterId, _weaponId);
     }
 
-    function unequipWeapon(
-        uint256 _characterId
-    ) external onlyOwnerOf(_characterId) {
+    function unequipWeapon(uint256 _characterId) external onlyOwnerOf(_characterId) {
         uint256 weaponId = characters[_characterId].weaponId;
         characters[_characterId].weaponId = 0;
         emit WeaponUnequipped(_characterId, weaponId);
     }
 
-    function equipArmor(
-        uint256 _characterId,
-        uint256 _armorId
-    ) external onlyOwnerOf(_characterId) {
+    function equipArmor(uint256 _characterId, uint256 _armorId) external onlyOwnerOf(_characterId) {
         require(armorContractAddress != address(0), "Armor contract not set");
-        require(
-            ArmorInterface(armorContractAddress).ownerOf(_armorId) ==
-                msg.sender,
-            "Not the armor owner"
-        );
+        require(ArmorInterface(armorContractAddress).ownerOf(_armorId) == msg.sender, "Not the armor owner");
 
         characters[_characterId].armorId = _armorId;
         emit ArmorEquipped(_characterId, _armorId);
     }
 
-    function unequipArmor(
-        uint256 _characterId
-    ) external onlyOwnerOf(_characterId) {
+    function unequipArmor(uint256 _characterId) external onlyOwnerOf(_characterId) {
         uint256 armorId = characters[_characterId].armorId;
         characters[_characterId].armorId = 0;
         emit ArmorUnequipped(_characterId, armorId);
     }
 
     // Apply diminishing returns formula to a stat value
-    function applyDiminishingReturns(
-        uint256 statValue,
-        uint8 classMultiplier
-    ) internal pure returns (uint256) {
+    function applyDiminishingReturns(uint256 statValue, uint8 classMultiplier) internal pure returns (uint256) {
         // Base formula: effective = actual * (classMultiplier/100) * (1 - log(statValue)/log(MAX_VALUE*10))
         if (statValue <= 30) {
             // No diminishing returns for low stats
@@ -388,63 +359,43 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         }
     }
 
-    function getEffectiveStrength(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function getEffectiveStrength(uint256 _characterId) public view returns (uint256) {
         CharacterStats memory character = characters[_characterId];
-        uint8 classMulti = classMultipliers[character.characterClass]
-            .strengthMulti;
+        uint8 classMulti = classMultipliers[character.characterClass].strengthMulti;
         return applyDiminishingReturns(character.strength, classMulti);
     }
 
-    function getEffectiveDefense(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function getEffectiveDefense(uint256 _characterId) public view returns (uint256) {
         CharacterStats memory character = characters[_characterId];
-        uint8 classMulti = classMultipliers[character.characterClass]
-            .defenseMulti;
+        uint8 classMulti = classMultipliers[character.characterClass].defenseMulti;
         return applyDiminishingReturns(character.defense, classMulti);
     }
 
-    function getEffectiveAgility(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function getEffectiveAgility(uint256 _characterId) public view returns (uint256) {
         CharacterStats memory character = characters[_characterId];
-        uint8 classMulti = classMultipliers[character.characterClass]
-            .agilityMulti;
+        uint8 classMulti = classMultipliers[character.characterClass].agilityMulti;
         return applyDiminishingReturns(character.agility, classMulti);
     }
 
-    function getEffectiveVitality(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function getEffectiveVitality(uint256 _characterId) public view returns (uint256) {
         CharacterStats memory character = characters[_characterId];
-        uint8 classMulti = classMultipliers[character.characterClass]
-            .vitalityMulti;
+        uint8 classMulti = classMultipliers[character.characterClass].vitalityMulti;
         return applyDiminishingReturns(character.vitality, classMulti);
     }
 
-    function getEffectiveIntelligence(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function getEffectiveIntelligence(uint256 _characterId) public view returns (uint256) {
         CharacterStats memory character = characters[_characterId];
-        uint8 classMulti = classMultipliers[character.characterClass]
-            .intelligenceMulti;
+        uint8 classMulti = classMultipliers[character.characterClass].intelligenceMulti;
         return applyDiminishingReturns(character.intelligence, classMulti);
     }
 
-    function getEffectiveMagicPower(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function getEffectiveMagicPower(uint256 _characterId) public view returns (uint256) {
         CharacterStats memory character = characters[_characterId];
-        uint8 classMulti = classMultipliers[character.characterClass]
-            .magicPowerMulti;
+        uint8 classMulti = classMultipliers[character.characterClass].magicPowerMulti;
         return applyDiminishingReturns(character.magicPower, classMulti);
     }
 
-    function calculateDamage(
-        uint256 _characterId
-    ) public view returns (uint256, bool, uint256) {
+    function calculateDamage(uint256 _characterId) public view returns (uint256, bool, uint256) {
         require(_exists(_characterId), "Character does not exist");
 
         CharacterStats memory character = characters[_characterId];
@@ -461,41 +412,31 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         uint256 baseDamage;
         if (character.characterClass == CharacterClass.Mage) {
             // Mages primarily use magic damage
-            baseDamage =
-                ((magicalDamage * 80) / 100) +
-                ((physicalDamage * 20) / 100);
+            baseDamage = ((magicalDamage * 80) / 100) + ((physicalDamage * 20) / 100);
         } else if (character.characterClass == CharacterClass.Demon) {
             // Demons use a mix of physical and magical damage
-            baseDamage =
-                ((magicalDamage * 40) / 100) +
-                ((physicalDamage * 60) / 100);
+            baseDamage = ((magicalDamage * 40) / 100) + ((physicalDamage * 60) / 100);
         } else if (character.characterClass == CharacterClass.God) {
             // Gods use the best of both
-            baseDamage = magicalDamage > physicalDamage
-                ? magicalDamage
-                : physicalDamage;
+            baseDamage = magicalDamage > physicalDamage ? magicalDamage : physicalDamage;
             baseDamage += (magicalDamage + physicalDamage) / 10; // 10% bonus from the lesser stat
         } else {
             // Other classes primarily use physical damage
-            baseDamage =
-                ((physicalDamage * 80) / 100) +
-                ((magicalDamage * 20) / 100);
+            baseDamage = ((physicalDamage * 80) / 100) + ((magicalDamage * 20) / 100);
         }
 
         // Intelligence adds efficiency to all damage types
         uint256 intBonus = effectiveIntelligence * 2;
 
         // Agility adds attack speed bonus
-        uint256 agilityBonus = effectiveAgility *
-            (character.characterClass == CharacterClass.Archer ? 2 : 1);
+        uint256 agilityBonus = effectiveAgility * (character.characterClass == CharacterClass.Archer ? 2 : 1);
 
         uint256 totalDamage = baseDamage + intBonus + agilityBonus;
 
         // Equipment bonuses
         if (character.weaponId > 0 && weaponContractAddress != address(0)) {
-            WeaponInterface.WeaponStats memory weapon = WeaponInterface(
-                weaponContractAddress
-            ).getWeaponStats(character.weaponId);
+            WeaponInterface.WeaponStats memory weapon =
+                WeaponInterface(weaponContractAddress).getWeaponStats(character.weaponId);
 
             totalDamage += weapon.damageBonus * 3;
 
@@ -514,9 +455,8 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         }
 
         if (character.armorId > 0 && armorContractAddress != address(0)) {
-            ArmorInterface.ArmorStats memory armor = ArmorInterface(
-                armorContractAddress
-            ).getArmorStats(character.armorId);
+            ArmorInterface.ArmorStats memory armor =
+                ArmorInterface(armorContractAddress).getArmorStats(character.armorId);
             totalDamage += armor.damageBonus * 1;
 
             if (character.characterClass == CharacterClass.Mage) {
@@ -560,9 +500,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         return (totalDamage, isCritical, critMultiplier);
     }
 
-    function calculateHealth(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function calculateHealth(uint256 _characterId) public view returns (uint256) {
         require(_exists(_characterId), "Character does not exist");
 
         CharacterStats memory character = characters[_characterId];
@@ -577,8 +515,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
 
         uint256 strengthBonus = effectiveStrength * 7;
 
-        uint256 magicPowerBonus = (effectiveMagicPower * 7) +
-            (effectiveIntelligence * 3);
+        uint256 magicPowerBonus = (effectiveMagicPower * 7) + (effectiveIntelligence * 3);
 
         uint256 totalHealth = baseHealth + strengthBonus + magicPowerBonus;
 
@@ -591,18 +528,16 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         }
 
         if (character.armorId > 0 && armorContractAddress != address(0)) {
-            ArmorInterface.ArmorStats memory armor = ArmorInterface(
-                armorContractAddress
-            ).getArmorStats(character.armorId);
+            ArmorInterface.ArmorStats memory armor =
+                ArmorInterface(armorContractAddress).getArmorStats(character.armorId);
             totalHealth += armor.vitalityBonus * 15;
             totalHealth += armor.defenseBonus * 5;
             totalHealth += armor.magicPowerBonus * 3;
         }
 
         if (character.weaponId > 0 && weaponContractAddress != address(0)) {
-            WeaponInterface.WeaponStats memory weapon = WeaponInterface(
-                weaponContractAddress
-            ).getWeaponStats(character.weaponId);
+            WeaponInterface.WeaponStats memory weapon =
+                WeaponInterface(weaponContractAddress).getWeaponStats(character.weaponId);
             totalHealth += weapon.vitalityBonus * 8;
             totalHealth += weapon.magicPowerBonus * 2;
         }
@@ -614,9 +549,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         return totalHealth;
     }
 
-    function calculateDefense(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function calculateDefense(uint256 _characterId) public view returns (uint256) {
         require(_exists(_characterId), "Character does not exist");
 
         CharacterStats memory character = characters[_characterId];
@@ -632,31 +565,19 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         uint256 intelligenceBonus = (effectiveIntelligence * 3) / 2;
         uint256 magicPowerBonus = (effectiveMagicPower * 3) / 2;
 
-        uint256 totalDefense = baseDefense +
-            agilityBonus +
-            intelligenceBonus +
-            magicPowerBonus;
+        uint256 totalDefense = baseDefense + agilityBonus + intelligenceBonus + magicPowerBonus;
 
         if (character.characterClass == CharacterClass.Knight) {
             totalDefense = (totalDefense * (100 + KNIGHT_DEFENSE_BONUS)) / 100; // 20% bonus for Knights
         } else if (character.characterClass == CharacterClass.Archer) {
-            totalDefense =
-                baseDefense +
-                ((agilityBonus * 3) / 2) +
-                intelligenceBonus +
-                magicPowerBonus;
+            totalDefense = baseDefense + ((agilityBonus * 3) / 2) + intelligenceBonus + magicPowerBonus;
         } else if (character.characterClass == CharacterClass.Mage) {
-            totalDefense =
-                baseDefense +
-                agilityBonus +
-                ((intelligenceBonus * 3) / 2) +
-                ((magicPowerBonus * 3) / 2);
+            totalDefense = baseDefense + agilityBonus + ((intelligenceBonus * 3) / 2) + ((magicPowerBonus * 3) / 2);
         }
 
         if (character.armorId > 0 && armorContractAddress != address(0)) {
-            ArmorInterface.ArmorStats memory armor = ArmorInterface(
-                armorContractAddress
-            ).getArmorStats(character.armorId);
+            ArmorInterface.ArmorStats memory armor =
+                ArmorInterface(armorContractAddress).getArmorStats(character.armorId);
             totalDefense += armor.defenseBonus * 4;
             totalDefense += armor.agilityBonus * 2;
             totalDefense += armor.intelligenceBonus * 2;
@@ -664,9 +585,8 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         }
 
         if (character.weaponId > 0 && weaponContractAddress != address(0)) {
-            WeaponInterface.WeaponStats memory weapon = WeaponInterface(
-                weaponContractAddress
-            ).getWeaponStats(character.weaponId);
+            WeaponInterface.WeaponStats memory weapon =
+                WeaponInterface(weaponContractAddress).getWeaponStats(character.weaponId);
             totalDefense += weapon.defenseBonus * 2;
             totalDefense += weapon.intelligenceBonus;
             totalDefense += weapon.magicPowerBonus;
@@ -681,9 +601,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
     }
 
     // Calculate dodge chance based on agility
-    function calculateDodgeChance(
-        uint256 _characterId
-    ) public view returns (uint256) {
+    function calculateDodgeChance(uint256 _characterId) public view returns (uint256) {
         uint256 effectiveAgility = getEffectiveAgility(_characterId);
         CharacterStats memory character = characters[_characterId];
 
@@ -697,9 +615,8 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
 
         // Equipment bonus
         if (character.armorId > 0 && armorContractAddress != address(0)) {
-            ArmorInterface.ArmorStats memory armor = ArmorInterface(
-                armorContractAddress
-            ).getArmorStats(character.armorId);
+            ArmorInterface.ArmorStats memory armor =
+                ArmorInterface(armorContractAddress).getArmorStats(character.armorId);
             dodgeChance += armor.agilityBonus / 4;
         }
 
@@ -712,10 +629,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
     }
 
     // Add experience to a character
-    function addExperience(
-        uint256 _characterId,
-        uint256 _experience
-    ) public onlyMinter characterExists(_characterId) {
+    function addExperience(uint256 _characterId, uint256 _experience) public onlyMinter characterExists(_characterId) {
         uint256 oldLevel = characters[_characterId].experience / XP_PER_LEVEL;
         characters[_characterId].experience += _experience;
         uint256 newLevel = characters[_characterId].experience / XP_PER_LEVEL;
@@ -723,18 +637,16 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         // If leveled up, award stat points
         if (newLevel > oldLevel) {
             uint256 levelsGained = newLevel - oldLevel;
-            characters[_characterId].statPoints += uint16(
-                levelsGained * POINTS_PER_LEVEL
-            );
+            characters[_characterId].statPoints += uint16(levelsGained * POINTS_PER_LEVEL);
         }
     }
 
     // Update character after battle
-    function updateBattleResult(
-        uint256 _characterId,
-        bool _isWinner,
-        uint256 _experienceGained
-    ) external onlyMinter characterExists(_characterId) {
+    function updateBattleResult(uint256 _characterId, bool _isWinner, uint256 _experienceGained)
+        external
+        onlyMinter
+        characterExists(_characterId)
+    {
         if (_isWinner) {
             characters[_characterId].wins++;
             addExperience(_characterId, _experienceGained);
@@ -764,27 +676,19 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         CharacterStats storage character = characters[_characterId];
 
         // Calculate total points needed
-        uint16 totalPointsNeeded = _strengthIncrease +
-            _defenseIncrease +
-            _agilityIncrease +
-            _vitalityIncrease +
-            _intelligenceIncrease +
-            _magicPowerIncrease;
+        uint16 totalPointsNeeded = _strengthIncrease + _defenseIncrease + _agilityIncrease + _vitalityIncrease
+            + _intelligenceIncrease + _magicPowerIncrease;
 
-        require(
-            character.statPoints >= totalPointsNeeded,
-            "Not enough stat points"
-        );
+        require(character.statPoints >= totalPointsNeeded, "Not enough stat points");
 
         // Ensure stats don't exceed maximum
         require(
-            character.strength + _strengthIncrease <= MAX_STAT_VALUE &&
-                character.defense + _defenseIncrease <= MAX_STAT_VALUE &&
-                character.agility + _agilityIncrease <= MAX_STAT_VALUE &&
-                character.vitality + _vitalityIncrease <= MAX_STAT_VALUE &&
-                character.intelligence + _intelligenceIncrease <=
-                MAX_STAT_VALUE &&
-                character.magicPower + _magicPowerIncrease <= MAX_STAT_VALUE,
+            character.strength + _strengthIncrease <= MAX_STAT_VALUE
+                && character.defense + _defenseIncrease <= MAX_STAT_VALUE
+                && character.agility + _agilityIncrease <= MAX_STAT_VALUE
+                && character.vitality + _vitalityIncrease <= MAX_STAT_VALUE
+                && character.intelligence + _intelligenceIncrease <= MAX_STAT_VALUE
+                && character.magicPower + _magicPowerIncrease <= MAX_STAT_VALUE,
             "Stats would exceed maximum"
         );
 
@@ -811,10 +715,7 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
     }
 
     // Change character class
-    function changeClass(
-        uint256 _characterId,
-        uint8 _newClassId
-    ) external onlyOwnerOf(_characterId) {
+    function changeClass(uint256 _characterId, uint8 _newClassId) external onlyOwnerOf(_characterId) {
         require(_newClassId <= uint8(CharacterClass.God), "Invalid class ID");
 
         CharacterStats storage character = characters[_characterId];
@@ -824,17 +725,11 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         require(character.characterClass != newClass, "Already this class");
 
         // Only Humans can change class
-        require(
-            character.characterClass == CharacterClass.Human,
-            "Only Humans can change class"
-        );
+        require(character.characterClass == CharacterClass.Human, "Only Humans can change class");
 
         // Check if enough stat points
         uint16 requiredPoints = classChangeRequirements[newClass];
-        require(
-            character.statPoints >= requiredPoints,
-            "Not enough stat points"
-        );
+        require(character.statPoints >= requiredPoints, "Not enough stat points");
 
         // Deduct stat points
         character.statPoints -= requiredPoints;
@@ -871,28 +766,15 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
 
     // Simple pseudo-random number generator for crit calculation
     function _pseudoRandomNumber(uint256 seed) internal view returns (uint256) {
-        return
-            uint256(
-                keccak256(
-                    abi.encodePacked(
-                        blockhash(block.number - 1),
-                        seed,
-                        block.timestamp
-                    )
-                )
-            ) % 100;
+        return uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), seed, block.timestamp))) % 100;
     }
 
-    function getCharacterStats(
-        uint256 _tokenId
-    ) external view returns (CharacterStats memory) {
+    function getCharacterStats(uint256 _tokenId) external view returns (CharacterStats memory) {
         require(_exists(_tokenId), "Character does not exist");
         return characters[_tokenId];
     }
 
-    function getCharactersByOwner(
-        address _owner
-    ) external view returns (uint256[] memory) {
+    function getCharactersByOwner(address _owner) external view returns (uint256[] memory) {
         uint256 tokenCount = balanceOf(_owner);
         uint256[] memory tokenIds = new uint256[](tokenCount);
 
@@ -908,30 +790,23 @@ contract CharacterCard is ERC721, ERC721Enumerable, ERC721URIStorage {
         delete characters[_tokenId];
     }
 
-    function _update(
-        address to,
-        uint256 tokenId,
-        address auth
-    ) internal override(ERC721, ERC721Enumerable) returns (address) {
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override(ERC721, ERC721Enumerable)
+        returns (address)
+    {
         return super._update(to, tokenId, auth);
     }
 
-    function _increaseBalance(
-        address account,
-        uint128 value
-    ) internal override(ERC721, ERC721Enumerable) {
+    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
         super._increaseBalance(account, value);
     }
 
-    function tokenURI(
-        uint256 tokenId
-    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    )
+    function supportsInterface(bytes4 interfaceId)
         public
         view
         override(ERC721, ERC721Enumerable, ERC721URIStorage)

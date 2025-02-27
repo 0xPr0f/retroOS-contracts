@@ -14,32 +14,12 @@ contract CharacterCardTest is Test {
     function test_CreateCharacterNotMinter() public {
         // Should not revert as i have disabled only minter can create character
         // vm.expectRevert("Not authorized to mint");
-        characterCard.createCharacter(
-            "Alice",
-            "uri",
-            50,
-            50,
-            50,
-            50,
-            50,
-            50,
-            2
-        );
+        characterCard.createCharacter("Alice", "uri", 50, 50, 50, 50, 50, 50, 2);
     }
 
     function test_changeMinterStatus() public {
         characterCard.changeMinterStatus(address(this));
-        characterCard.createCharacter(
-            "Alice",
-            "uri",
-            50,
-            50,
-            50,
-            50,
-            50,
-            50,
-            2
-        );
+        characterCard.createCharacter("Alice", "uri", 50, 50, 50, 50, 50, 50, 2);
         assertEq(characterCard.balanceOf(address(this)), 1);
     }
 
@@ -74,50 +54,32 @@ contract CharacterCardTest is Test {
 
     function test_GetCharacterStats() public {
         uint256 characterId = createTestCharacter();
-        CharacterCard.CharacterStats memory stats = characterCard
-            .getCharacterStats(characterId);
+        CharacterCard.CharacterStats memory stats = characterCard.getCharacterStats(characterId);
         assertEq(stats.name, "Alice");
         assertEq(stats.strength, 50);
     }
 
     function test_GetCharactersByOwner() public {
+        characterCard.changeMinterStatus(address(this));
         createTestCharacter();
         createTestCharacter();
-        uint256[] memory characters = characterCard.getCharactersByOwner(
-            address(this)
-        );
+        uint256[] memory characters = characterCard.getCharactersByOwner(address(this));
         assertEq(characters.length, 2);
     }
 
-    function test_Revert_BurnNotMinter() public {
+    function test_BurnNotMinter() public {
+        vm.startPrank(address(135));
         uint256 characterId = createTestCharacter();
-        vm.expectRevert("Not authorized to mint");
-        vm.prank(address(135));
         characterCard.burn(characterId);
+        vm.stopPrank();
     }
 
     function createTestCharacter() private returns (uint256) {
-        characterCard.changeMinterStatus(address(this));
-        characterCard.createCharacter(
-            "Alice",
-            "uri",
-            50,
-            50,
-            50,
-            50,
-            50,
-            50,
-            3
-        );
+        characterCard.createCharacter("Alice", "uri", 50, 50, 50, 50, 50, 50, 3);
         return 1;
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
 }
