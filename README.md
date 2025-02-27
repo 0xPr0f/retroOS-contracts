@@ -55,8 +55,8 @@ forge test
 
 ## Credits
 
-- Original [RealmClash](github.com/0xPr0f/realmclash) concept by [0xPr0f](github.com/0xPr0f)
-- Integrated with [Retro OS Arcade](retro.2δ.com)
+- Original [RealmClash](https://github.com/0xPr0f/realmclash) concept by [0xPr0f](https://github.com/0xPr0f)
+- Integrated with [Retro OS Arcade](https://github.com/0xPr0f/retroOS-arcade)
 
 ## Contributions
 
