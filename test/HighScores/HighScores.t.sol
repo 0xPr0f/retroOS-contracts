@@ -12,7 +12,11 @@ contract HighScoresTest is Test {
     address public player2;
     uint256 public serverPrivateKey;
 
-    event ScoreSubmitted(address player, HighScores.GameType gameType, uint256 score);
+    event ScoreSubmitted(
+        address player,
+        HighScores.GameType gameType,
+        uint256 score
+    );
     event ServerPublicKeyUpdated(address newKey);
 
     function setUp() public {
@@ -45,9 +49,16 @@ contract HighScoresTest is Test {
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
         // Create signature with player1 address
-        bytes32 messageHash = keccak256(abi.encodePacked(player1, score, gameType));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(serverPrivateKey, ethSignedMessageHash);
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(player1, score, gameType)
+        );
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            serverPrivateKey,
+            ethSignedMessageHash
+        );
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Submit score as player1
@@ -55,6 +66,49 @@ contract HighScoresTest is Test {
         vm.expectEmit(true, true, true, true);
         emit ScoreSubmitted(player1, gameType, score);
         highScores.submitScore(player1, score, gameType, signature);
+
+        // Verify score was recorded
+        assertEq(highScores.getHighestScore(player1, gameType), score);
+        assertEq(highScores.getTotalPlayers(gameType), 1);
+    }
+    function test_SubmitBatchScore() public {
+        uint256 score = 100;
+        HighScores.GameType gameType = HighScores.GameType.SNAKE;
+
+        // Create signature with player1 address
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(player1, score, gameType)
+        );
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            serverPrivateKey,
+            ethSignedMessageHash
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Submit score as player1
+        vm.prank(player1);
+        vm.expectEmit(true, true, true, true);
+        emit ScoreSubmitted(player1, gameType, score);
+
+        uint256[] memory scores = new uint256[](3);
+        scores[0] = score;
+        scores[1] = score;
+        scores[2] = score;
+
+        HighScores.GameType[] memory gameTypes = new HighScores.GameType[](3);
+        gameTypes[0] = gameType;
+        gameTypes[1] = gameType;
+        gameTypes[2] = gameType;
+
+        bytes[] memory signatures = new bytes[](3);
+        signatures[0] = signature;
+        signatures[1] = signature;
+        signatures[2] = signature;
+
+        highScores.batchSubmitScores(player1, scores, gameTypes, signatures);
 
         // Verify score was recorded
         assertEq(highScores.getHighestScore(player1, gameType), score);
@@ -70,9 +124,19 @@ contract HighScoresTest is Test {
 
         for (uint256 i = 0; i < scores.length; i++) {
             // Create signature
-            bytes32 messageHash = keccak256(abi.encodePacked(player1, scores[i], gameType));
-            bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(serverPrivateKey, ethSignedMessageHash);
+            bytes32 messageHash = keccak256(
+                abi.encodePacked(player1, scores[i], gameType)
+            );
+            bytes32 ethSignedMessageHash = keccak256(
+                abi.encodePacked(
+                    "\x19Ethereum Signed Message:\n32",
+                    messageHash
+                )
+            );
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+                serverPrivateKey,
+                ethSignedMessageHash
+            );
             bytes memory signature = abi.encodePacked(r, s, v);
 
             // Submit score
@@ -84,7 +148,10 @@ contract HighScoresTest is Test {
         assertEq(highScores.getHighestScore(player1, gameType), 200);
 
         // Verify all scores
-        HighScores.Score[] memory allScores = highScores.getAllScores(player1, gameType);
+        HighScores.Score[] memory allScores = highScores.getAllScores(
+            player1,
+            gameType
+        );
         assertEq(allScores.length, 3);
         assertEq(allScores[0].score, 100);
         assertEq(allScores[1].score, 200);
@@ -99,7 +166,8 @@ contract HighScoresTest is Test {
         submitScoreForPlayer(player2, 200, gameType);
 
         // Get leaderboard
-        HighScores.LeaderboardEntry[] memory leaderboard = highScores.getLeaderboard(gameType, 2);
+        HighScores.LeaderboardEntry[] memory leaderboard = highScores
+            .getLeaderboard(gameType, 2);
 
         // Verify leaderboard order
         assertEq(leaderboard.length, 2);
@@ -118,7 +186,11 @@ contract HighScoresTest is Test {
         submitScoreForPlayer(player1, 150, gameType);
 
         // Get latest 2 scores
-        HighScores.Score[] memory latestScores = highScores.getLatestScores(player1, gameType, 2);
+        HighScores.Score[] memory latestScores = highScores.getLatestScores(
+            player1,
+            gameType,
+            2
+        );
 
         // Verify latest scores
         assertEq(latestScores.length, 2);
@@ -142,9 +214,16 @@ contract HighScoresTest is Test {
 
         // Create signature with wrong private key
         uint256 wrongPrivateKey = 0x5678;
-        bytes32 messageHash = keccak256(abi.encodePacked(player1, score, gameType));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPrivateKey, ethSignedMessageHash);
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(player1, score, gameType)
+        );
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            wrongPrivateKey,
+            ethSignedMessageHash
+        );
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.prank(player1);
@@ -157,9 +236,16 @@ contract HighScoresTest is Test {
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
         // Create signature with player1 address
-        bytes32 messageHash = keccak256(abi.encodePacked(player1, score, gameType));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(serverPrivateKey, ethSignedMessageHash);
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(player1, score, gameType)
+        );
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            serverPrivateKey,
+            ethSignedMessageHash
+        );
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Try to submit score as player2 with player1's signature
@@ -173,9 +259,16 @@ contract HighScoresTest is Test {
         HighScores.GameType gameType = HighScores.GameType.SNAKE;
 
         // Create signature with player1 address
-        bytes32 messageHash = keccak256(abi.encodePacked(player1, score, gameType));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(serverPrivateKey, ethSignedMessageHash);
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(player1, score, gameType)
+        );
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            serverPrivateKey,
+            ethSignedMessageHash
+        );
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Try to submit score as player1 but with player2's address in the parameters
@@ -193,10 +286,21 @@ contract HighScoresTest is Test {
     }
 
     // Helper function for tests that submit multiple scores
-    function submitScoreForPlayer(address player, uint256 score, HighScores.GameType gameType) internal {
-        bytes32 messageHash = keccak256(abi.encodePacked(player, score, gameType));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(serverPrivateKey, ethSignedMessageHash);
+    function submitScoreForPlayer(
+        address player,
+        uint256 score,
+        HighScores.GameType gameType
+    ) internal {
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(player, score, gameType)
+        );
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            serverPrivateKey,
+            ethSignedMessageHash
+        );
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.prank(player);
